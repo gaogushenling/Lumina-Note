@@ -1,163 +1,179 @@
 <div align="center">
 
+<img src="https://via.placeholder.com/120x120?text=Logo" alt="Lumina Note Logo" width="120" height="120" />
+
 # ✨ Lumina Note
 
-**本地优先、AI 驱动的现代 Markdown 笔记应用**
+**本地优先 · AI 驱动 · 现代知识库**
 
-![Tauri](https://img.shields.io/badge/Tauri-v2-blue?logo=tauri)
-![React](https://img.shields.io/badge/React-18-61dafb?logo=react)
-![Rust](https://img.shields.io/badge/Rust-backend-orange?logo=rust)
-![License](https://img.shields.io/badge/License-MIT-green)
+构建属于你的第二大脑，支持 Agent 自动化的 Markdown 笔记应用。
+
+[![Tauri](https://img.shields.io/badge/Tauri-v2-24C8DB?style=flat-square&logo=tauri&logoColor=white)](https://tauri.app/)
+[![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev/)
+[![Rust](https://img.shields.io/badge/Rust-Backend-dea584?style=flat-square&logo=rust&logoColor=black)](https://www.rust-lang.org/)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg?style=flat-square)](LICENSE)
+
+[快速开始](#-快速开始) • [功能特性](#-核心特性) • [技术架构](#-技术架构) • [贡献指南](#)
+
+<br/>
+
+<img src="https://via.placeholder.com/800x450?text=App+Screenshot+Placeholder" alt="Lumina Note Screenshot" width="800" style="border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);" />
 
 </div>
 
+<br/>
+
 ---
 
-## 🎯 特性一览
+## 🎯 核心特性
 
-### � 编辑器
-- **多模式切换** — 阅读 / 实时预览 / 源码模式
-- **WikiLinks** — `[[双向链接]]` 构建知识网络
-- **数学公式** — 完整 LaTeX / KaTeX 支持
-- **Callouts** — Obsidian 风格提示块 `> [!note]`
-- **语法高亮** — 代码块多语言支持
+Lumina Note 不仅仅是一个编辑器，它是一个集成了 LLM 能力的知识生产环境。
 
-### 🤖 AI 助手
+### 📝 沉浸式编辑体验
+* **多模式切换**：无缝切换 **源码 / 实时预览 / 阅读模式**。
+* **双向链接**：使用 `[[WikiLinks]]` 构建网状知识图谱。
+* **专业排版**：原生支持 LaTeX 数学公式、Mermaid 图表及 Obsidian 风格 `> [!info]` 提示块。
+* **语法高亮**：基于 CodeMirror 6，支持上百种语言的代码高亮。
 
-| 功能 | 描述 |
-|------|------|
-| **Agent 模式** | 智能任务执行，自动读取/编辑/搜索笔记 |
-| **对话模式** | 简单问答，快速获取信息 |
-| **悬浮球** | 可拖拽的 AI 助手，不占用侧栏空间 |
-| **Diff 预览** | AI 修改前预览，支持接受/拒绝 |
-| **RAG 语义搜索** | 基于向量的笔记语义检索 |
+### 🤖 AI Agent 系统
+| 模块 | 功能描述 |
+| :--- | :--- |
+| **Agent 模式** | 能够理解意图，自动执行读取、编辑、搜索笔记等复杂任务链。 |
+| **AI 悬浮球** | 随时唤起的助手，支持拖拽，不打断当前心流。 |
+| **Diff 预览** | AI 修改内容前提供 Diff 对比视图，由你决定是否 Apply。 |
+| **RAG 语义搜索** | 内置 SQLite 向量库，基于语义理解检索你的本地知识库。 |
 
-### 🔌 多 LLM Provider 支持
-
-```
-Anthropic (Claude)  •  OpenAI (GPT)  •  Moonshot (Kimi)
-DeepSeek  •  Groq  •  OpenRouter  •  Ollama (本地)
-```
-
-### 🕸️ 知识图谱
-- 基于双向链接的可视化关系图
-- 交互式探索：缩放、拖拽、点击跳转
+### 🔌 多模型生态
+支持接入主流 LLM Provider，自由切换模型：
+> `Anthropic` · `OpenAI` · `DeepSeek` · `Moonshot` · `Groq` · `Ollama (Local)`
 
 ---
 
 ## 🛠️ 技术架构
 
-```
-┌─────────────────────────────────────────────────────┐
-│                    Lumina Note                      │
-├─────────────────────────────────────────────────────┤
-│  Frontend (React + TypeScript)                      │
-│  ├── Editor (CodeMirror)                           │
-│  ├── AI Agent System                               │
-│  ├── RAG Service                                   │
-│  └── State Management (Zustand)                    │
-├─────────────────────────────────────────────────────┤
-│  Backend (Rust + Tauri v2)                         │
-│  ├── File System Operations                        │
-│  └── SQLite Vector Database                        │
-└─────────────────────────────────────────────────────┘
+本项目采用 **Rust + React** 的前后端分离架构，通过 Tauri v2 进行原生能力桥接。
+
+```mermaid
+graph TD
+    subgraph Frontend["🖥️ Frontend (React 18 + TS)"]
+        UI[Components & UI]
+        Editor[CodeMirror Editor]
+        Agent[AI Agent System]
+        Store[Zustand Store]
+    end
+
+    subgraph Backend["🦀 Backend (Rust + Tauri v2)"]
+        Tauri[Tauri Commands]
+        FS[File System Ops]
+        Vector[SQLite Vector DB]
+        LLM[LLM Client]
+    end
+
+    UI --> Store
+    Editor --> Store
+    Agent --> LLM
+    Agent --> Tauri
+    Tauri --> FS
+    Tauri --> Vector
 ```
 
-| 层级 | 技术 |
-|------|------|
-| 桌面框架 | Tauri v2 |
-| 前端 | React 18 + TypeScript |
-| 样式 | Tailwind CSS |
-| 编辑器 | CodeMirror 6 |
-| 状态管理 | Zustand |
-| 后端 | Rust |
-| 向量存储 | SQLite |
+### 技术栈清单
+
+* **Core**: [Tauri v2](https://v2.tauri.app/)
+* **UI**: React 18, Tailwind CSS, Radix UI
+* **Editor**: CodeMirror 6
+* **State**: Zustand
+* **Database**: SQLite (Vector Extension)
+* **Lang**: TypeScript, Rust
 
 ---
 
 ## 🚀 快速开始
 
-### 环境要求
-- Node.js 18+
-- Rust 1.70+
-- npm / pnpm
+### 环境准备
+在此之前，请确保你的环境已安装：
+* **Node.js**: 18.0+
+* **Rust**: 1.70+
+* **包管理器**: npm 或 pnpm
 
-### 安装 & 运行
+### 安装步骤
 
-```bash
-# 克隆项目
-git clone https://github.com/blueberrycongee/Lumina-Note.git
-cd Lumina-Note
+1.  **克隆仓库**
+    ```bash
+    git clone [https://github.com/blueberrycongee/Lumina-Note.git](https://github.com/blueberrycongee/Lumina-Note.git)
+    cd Lumina-Note
+    ```
 
-# 安装依赖
-npm install
+2.  **安装依赖**
+    ```bash
+    npm install
+    # 或者 pnpm install
+    ```
 
-# 启动开发服务器
-npm run tauri dev
+3.  **开发模式运行**
+    ```bash
+    npm run tauri dev
+    ```
 
-# 构建生产版本
-npm run tauri build
-```
-
----
-
-## 📁 项目结构
-
-```
-lumina-note/
-├── src/
-│   ├── components/        # UI 组件
-│   ├── editor/           # CodeMirror 编辑器
-│   ├── agent/            # AI Agent 系统
-│   │   ├── core/         # AgentLoop, StateManager
-│   │   ├── modes/        # editor, organizer, researcher, writer
-│   │   ├── tools/        # read, edit, write, search...
-│   │   └── prompts/      # System prompts
-│   ├── services/
-│   │   ├── llm/          # 多 Provider LLM 服务
-│   │   └── rag/          # RAG 语义搜索
-│   └── stores/           # Zustand 状态管理
-├── src-tauri/
-│   └── src/
-│       ├── commands/     # Tauri 命令
-│       ├── fs/           # 文件系统
-│       └── vector_db/    # 向量数据库
-└── package.json
-```
+4.  **构建生产包**
+    ```bash
+    npm run tauri build
+    ```
 
 ---
 
-## ⌨️ 快捷键
+## ⌨️ 快捷键指南
 
-| 快捷键 | 功能 |
-|--------|------|
-| `Ctrl+S` | 保存 |
-| `Ctrl+N` | 新建笔记 |
-| `Ctrl+P` | 命令面板 |
-| `Ctrl+Shift+F` | 全局搜索 |
-| `Ctrl+Z` / `Ctrl+Shift+Z` | 撤销 / 重做 |
-| `Ctrl+B` | 切换侧边栏 |
+| 组合键 | 作用 |
+| :--- | :--- |
+| `Ctrl/Cmd + P` | **命令面板** (类似于 VSCode) |
+| `Ctrl/Cmd + S` | 保存当前文件 |
+| `Ctrl/Cmd + N` | 新建笔记 |
+| `Ctrl/Cmd + Shift + F` | 全局语义/关键字搜索 |
+| `Ctrl/Cmd + B` | 切换侧边栏显隐 |
 
 ---
 
 ## 🗺️ Roadmap
 
-- [x] 多 LLM Provider 支持
-- [x] AI Agent 系统
-- [x] RAG 语义搜索
-- [x] AI 悬浮球
-- [x] 流式响应
-- [ ] 历史会话持久化
-- [ ] 插件系统
+- [x] **Core**: 多 LLM Provider 接入支持
+- [x] **Agent**: 具备工具调用能力的 AI Agent 系统
+- [x] **RAG**: 本地向量数据库与语义检索
+- [x] **UI**: AI 悬浮球与流式响应交互
+- [ ] **Feature**: 历史会话持久化存储
+- [ ] **Feature**: 插件系统 API 设计
+- [ ] **Sync**: WebDAV / Git 同步支持
 
 ---
 
-## 🙏 致谢
+## 📁 项目结构概览
 
-本项目的 Agent 系统和流式传输架构参考了 [Roo-Code](https://github.com/RooVetGit/Roo-Code) 的部分代码实现，特此感谢。
+```
+lumina-note/
+├── src/
+│   ├── agent/           # AI Agent 核心逻辑 (Core, Tools, Prompts)
+│   ├── components/      # React UI 组件
+│   ├── editor/          # CodeMirror 编辑器配置与扩展
+│   ├── services/        # LLM 客户端与 RAG 服务层
+│   └── stores/          # Zustand 状态管理
+├── src-tauri/
+│   └── src/
+│       ├── commands/    # 暴露给前端的 Rust 命令
+│       ├── fs/          # 文件系统操作封装
+│       └── vector_db/   # SQLite 向量存储逻辑
+└── package.json
+```
 
 ---
 
-## 📄 License
+## 🤝 致谢与协议
 
-Apache License 2.0 © 2024 Lumina Note
+**Credits**
+* Agent 架构与流式处理部分参考了 [Roo-Code](https://github.com/RooVetGit/Roo-Code) 的优秀实现。
+
+**License**
+* 本项目基于 [Apache License 2.0](LICENSE) 开源。
+
+<div align="center">
+    <p>Made with ❤️ by <a href="https://github.com/blueberrycongee">blueberrycongee</a></p>
+</div>

@@ -13,6 +13,8 @@ export type {
   LLMProviderType,
   ProviderMeta,
   ModelMeta,
+  StreamChunk,
+  LLMStream,
 } from "./types";
 
 // Provider 注册表
@@ -34,7 +36,7 @@ export {
 
 // ============ 统一调用接口 ============
 
-import type { Message, LLMOptions, LLMResponse, LLMProvider } from "./types";
+import type { Message, LLMOptions, LLMResponse, LLMProvider, LLMStream } from "./types";
 import { getLLMConfig } from "./config";
 import { 
   AnthropicProvider, 
@@ -86,4 +88,34 @@ export async function callLLM(
 ): Promise<LLMResponse> {
   const provider = createProvider();
   return provider.call(messages, options);
+}
+
+/**
+ * 流式调用 LLM (统一入口)
+ * 返回 AsyncGenerator，逐块 yield 内容
+ */
+export async function* callLLMStream(
+  messages: Message[],
+  options?: LLMOptions
+): LLMStream {
+  const provider = createProvider();
+  
+  // 检查 Provider 是否支持流式
+  if (!provider.stream) {
+    // 降级：不支持流式的 Provider 一次性返回
+    const response = await provider.call(messages, options);
+    yield { type: "text", text: response.content };
+    if (response.usage) {
+      yield {
+        type: "usage",
+        inputTokens: response.usage.promptTokens,
+        outputTokens: response.usage.completionTokens,
+        totalTokens: response.usage.totalTokens,
+      };
+    }
+    return;
+  }
+  
+  // 使用 Provider 的流式方法
+  yield* provider.stream(messages, options);
 }

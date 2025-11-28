@@ -34,8 +34,12 @@ export function AIFloatingPanel({ ballPosition, onDock }: AIFloatingPanelProps) 
     clearChat,
     messages,
     isLoading,
+    isStreaming,
+    streamingContent,
+    streamingReasoning,
     error,
-    sendMessage,
+    sendMessageStream,
+    stopStreaming,
   } = useAIStore();
   const { currentFile, currentContent } = useFileStore();
 
@@ -45,7 +49,7 @@ export function AIFloatingPanel({ ballPosition, onDock }: AIFloatingPanelProps) 
   // 滚动到底部
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, streamingContent, streamingReasoning]);
 
   // 计算面板位置（在悬浮球旁边）
   const getPanelPosition = () => {
@@ -224,7 +228,7 @@ export function AIFloatingPanel({ ballPosition, onDock }: AIFloatingPanelProps) 
           <>
             {/* Chat Messages */}
             <div className="flex-1 overflow-y-auto p-3 space-y-3">
-              {messages.length === 0 && (
+              {messages.length === 0 && !isStreaming && (
                 <div className="text-sm text-muted-foreground leading-relaxed">
                   <p>你好！我可以帮你编辑笔记。</p>
                 </div>
@@ -242,7 +246,32 @@ export function AIFloatingPanel({ ballPosition, onDock }: AIFloatingPanelProps) 
                   )}
                 </div>
               ))}
-              {isLoading && (
+              
+              {/* 流式内容显示 */}
+              {isStreaming && (
+                <div className="space-y-2">
+                  {streamingReasoning && (
+                    <div className="text-xs text-muted-foreground bg-muted/50 p-2 rounded border-l-2 border-yellow-500">
+                      <div className="font-medium mb-1">💭 思考中...</div>
+                      <div className="whitespace-pre-wrap opacity-70">{streamingReasoning}</div>
+                    </div>
+                  )}
+                  {streamingContent && (
+                    <div className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+                      {streamingContent}
+                      <span className="inline-block w-2 h-4 bg-primary/50 animate-pulse ml-0.5" />
+                    </div>
+                  )}
+                  {!streamingContent && !streamingReasoning && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 size={14} className="animate-spin" />
+                      <span>连接中...</span>
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {isLoading && !isStreaming && (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Loader2 size={14} className="animate-spin" />
                   <span>思考中...</span>
@@ -263,22 +292,33 @@ export function AIFloatingPanel({ ballPosition, onDock }: AIFloatingPanelProps) 
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
+                    if (e.key === "Enter" && !e.shiftKey && !isStreaming) {
                       e.preventDefault();
                       handleSend();
                     }
                   }}
                   placeholder="输入消息..."
-                  className="flex-1 bg-muted/30 border border-border rounded-lg px-3 py-2 text-sm resize-none outline-none focus:ring-1 focus:ring-primary/50"
+                  disabled={isStreaming}
+                  className="flex-1 bg-muted/30 border border-border rounded-lg px-3 py-2 text-sm resize-none outline-none focus:ring-1 focus:ring-primary/50 disabled:opacity-50"
                   rows={2}
                 />
-                <button
-                  onClick={handleSend}
-                  disabled={!inputValue.trim() || isLoading}
-                  className="self-end bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground rounded-lg p-2 transition-colors"
-                >
-                  <Send size={16} />
-                </button>
+                {isStreaming ? (
+                  <button
+                    onClick={stopStreaming}
+                    className="self-end bg-red-500 hover:bg-red-600 text-white rounded-lg p-2 transition-colors"
+                    title="停止生成"
+                  >
+                    <span className="block w-4 h-4 bg-white rounded-sm" />
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleSend}
+                    disabled={!inputValue.trim() || isLoading}
+                    className="self-end bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground rounded-lg p-2 transition-colors"
+                  >
+                    <Send size={16} />
+                  </button>
+                )}
               </div>
             </div>
           </>
@@ -287,9 +327,9 @@ export function AIFloatingPanel({ ballPosition, onDock }: AIFloatingPanelProps) 
     </div>
   );
 
-  // 发送消息
+  // 发送消息（流式）
   function handleSend() {
-    if (!inputValue.trim() || isLoading) return;
+    if (!inputValue.trim() || isLoading || isStreaming) return;
     
     const fileContext = currentFile ? {
       path: currentFile,
@@ -297,7 +337,7 @@ export function AIFloatingPanel({ ballPosition, onDock }: AIFloatingPanelProps) 
       content: currentContent,
     } : undefined;
     
-    sendMessage(inputValue.trim(), fileContext);
+    sendMessageStream(inputValue.trim(), fileContext);
     setInputValue("");
   }
 }

@@ -68,10 +68,21 @@ export interface LLMUsage {
   totalTokens: number;
 }
 
+// ============ 流式响应类型 ============
+
+export type StreamChunk =
+  | { type: "text"; text: string }
+  | { type: "reasoning"; text: string }
+  | { type: "usage"; inputTokens: number; outputTokens: number; totalTokens: number }
+  | { type: "error"; error: string };
+
+export type LLMStream = AsyncGenerator<StreamChunk>;
+
 // ============ Provider 接口 ============
 
 export interface LLMProvider {
   call(messages: Message[], options?: LLMOptions): Promise<LLMResponse>;
+  stream?(messages: Message[], options?: LLMOptions): LLMStream;
 }
 
 // ============ Provider 注册表 ============

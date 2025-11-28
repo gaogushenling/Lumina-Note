@@ -13,6 +13,7 @@ import {
   getAIConfig,
 } from "@/lib/ai";
 import { readFile } from "@/lib/tauri";
+import { callLLMStream } from "@/services/llm";
 
 // Pending diff for preview
 export interface PendingDiff {
@@ -40,6 +41,11 @@ interface AIState {
   isLoading: boolean;
   error: string | null;
   
+  // Streaming
+  isStreaming: boolean;
+  streamingContent: string;
+  streamingReasoning: string;
+  
   // Token usage
   tokenUsage: TokenUsage;
   totalTokensUsed: number;
@@ -60,6 +66,8 @@ interface AIState {
 
   // Actions
   sendMessage: (content: string, currentFile?: { path: string; name: string; content: string }) => Promise<void>;
+  sendMessageStream: (content: string, currentFile?: { path: string; name: string; content: string }) => Promise<void>;
+  stopStreaming: () => void;
   clearChat: () => void;
 }
 
@@ -77,6 +85,11 @@ export const useAIStore = create<AIState>()(
       messages: [],
       isLoading: false,
       error: null,
+      
+      // Streaming state
+      isStreaming: false,
+      streamingContent: "",
+      streamingReasoning: "",
       
       // Token usage
       tokenUsage: { prompt: 0, completion: 0, total: 0 },
@@ -233,12 +246,110 @@ export const useAIStore = create<AIState>()(
         }
       },
 
+      // 流式发送消息
+      sendMessageStream: async (content, currentFile) => {
+        const { messages, referencedFiles, config } = get();
+
+        if (!config.apiKey && config.provider !== "ollama") {
+          set({ error: "请先在设置中配置 API Key" });
+          return;
+        }
+
+        // Add user message
+        const userMessage: Message = { role: "user", content };
+        set({
+          messages: [...messages, userMessage],
+          isStreaming: true,
+          streamingContent: "",
+          streamingReasoning: "",
+          error: null,
+        });
+
+        try {
+          // Prepare files
+          let filesToSend = referencedFiles;
+          if (filesToSend.length === 0 && currentFile) {
+            filesToSend = [currentFile];
+          }
+
+          // Build messages with context
+          const systemMessage = filesToSend.length > 0
+            ? `你是一个有帮助的 AI 助手。当前上下文文件:\n\n${filesToSend.map(f => 
+                `### ${f.name}\n\`\`\`\n${f.content}\n\`\`\``
+              ).join("\n\n")}`
+            : "你是一个有帮助的 AI 助手。";
+
+          const llmMessages = [
+            { role: "system" as const, content: systemMessage },
+            ...messages.map(m => ({ role: m.role, content: m.content })),
+            { role: "user" as const, content },
+          ];
+
+          let fullContent = "";
+          let fullReasoning = "";
+
+          // Stream response
+          for await (const chunk of callLLMStream(llmMessages)) {
+            // Check if stopped
+            if (!get().isStreaming) break;
+
+            switch (chunk.type) {
+              case "text":
+                fullContent += chunk.text;
+                set({ streamingContent: fullContent });
+                break;
+              case "reasoning":
+                fullReasoning += chunk.text;
+                set({ streamingReasoning: fullReasoning });
+                break;
+              case "usage":
+                set((state) => ({
+                  tokenUsage: {
+                    prompt: chunk.inputTokens,
+                    completion: chunk.outputTokens,
+                    total: chunk.totalTokens,
+                  },
+                  totalTokensUsed: state.totalTokensUsed + chunk.totalTokens,
+                }));
+                break;
+              case "error":
+                set({ error: chunk.error, isStreaming: false });
+                return;
+            }
+          }
+
+          // Finalize: add assistant message
+          const finalContent = fullReasoning 
+            ? `<thinking>\n${fullReasoning}\n</thinking>\n\n${fullContent}`
+            : fullContent;
+
+          set((state) => ({
+            messages: [...state.messages, { role: "assistant" as const, content: finalContent }],
+            isStreaming: false,
+            streamingContent: "",
+            streamingReasoning: "",
+          }));
+        } catch (error) {
+          set({
+            error: error instanceof Error ? error.message : "发送消息失败",
+            isStreaming: false,
+          });
+        }
+      },
+
+      // 停止流式
+      stopStreaming: () => {
+        set({ isStreaming: false });
+      },
+
       // Clear chat
       clearChat: () => {
         set({
           messages: [],
           pendingEdits: [],
           error: null,
+          streamingContent: "",
+          streamingReasoning: "",
         });
       },
     }),

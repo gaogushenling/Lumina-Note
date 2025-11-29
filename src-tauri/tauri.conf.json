@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Neurone",
+  "productName": "Lumina Note",
   "version": "0.1.0",
-  "identifier": "com.neurone.app",
+  "identifier": "com.lumina-note.app",
   "bundle": {
     "icon": []
   },
@@ -16,7 +16,7 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "Neurone",
+        "title": "Lumina Note",
         "width": 1200,
         "height": 800,
         "minWidth": 800,

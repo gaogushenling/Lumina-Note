@@ -1927,6 +1927,24 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "34080505efa8e45a4b816c349525ebe327ceaa8559756f0356cba97ef3bf7432"
 
 [[package]]
+name = "lumina-note"
+version = "0.1.0"
+dependencies = [
+ "bincode",
+ "notify",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-dialog",
+ "tauri-plugin-fs",
+ "thiserror 2.0.17",
+ "tokio",
+ "walkdir",
+]
+
+[[package]]
 name = "mac"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2066,24 +2084,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ee6cda3051665f1fb8d9e08fc35c96d5a244fb1be711a03b71118828afc9a873"
 dependencies = [
  "jni-sys",
-]
-
-[[package]]
-name = "neurone"
-version = "0.1.0"
-dependencies = [
- "bincode",
- "notify",
- "rusqlite",
- "serde",
- "serde_json",
- "tauri",
- "tauri-build",
- "tauri-plugin-dialog",
- "tauri-plugin-fs",
- "thiserror 2.0.17",
- "tokio",
- "walkdir",
 ]
 
 [[package]]

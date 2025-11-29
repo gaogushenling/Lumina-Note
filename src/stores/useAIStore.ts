@@ -14,6 +14,7 @@ import {
 } from "@/lib/ai";
 import { readFile } from "@/lib/tauri";
 import { callLLMStream } from "@/services/llm";
+import { encryptApiKey, decryptApiKey } from "@/lib/crypto";
 
 // Pending diff for preview
 export interface PendingDiff {
@@ -68,7 +69,7 @@ function generateTitleFromAssistantContent(content: string, fallback: string = "
 interface AIState {
   // Config
   config: AIConfig;
-  setConfig: (config: Partial<AIConfig>) => void;
+  setConfig: (config: Partial<AIConfig>) => void | Promise<void>;
 
   // Chat
   messages: Message[];
@@ -116,9 +117,21 @@ export const useAIStore = create<AIState>()(
     (set, get) => ({
       // Config
       config: getAIConfig(),
-      setConfig: (newConfig) => {
-        setAIConfig(newConfig);
-        set({ config: getAIConfig() });
+      setConfig: async (newConfig) => {
+        // 如果有新的 apiKey，先加密
+        if (newConfig.apiKey !== undefined) {
+          const encryptedKey = await encryptApiKey(newConfig.apiKey);
+          newConfig = { ...newConfig, apiKey: newConfig.apiKey }; // 内存中保持明文
+          // 同步到内存配置
+          setAIConfig(newConfig);
+          // 存储时使用加密的 key
+          set({ 
+            config: { ...getAIConfig(), apiKey: encryptedKey } 
+          });
+        } else {
+          setAIConfig(newConfig);
+          set({ config: getAIConfig() });
+        }
       },
 
       // Chat state
@@ -523,12 +536,22 @@ export const useAIStore = create<AIState>()(
       },
     }),
     {
-      name: "neurone-ai",
+      name: "lumina-ai",
       partialize: (state) => ({
         config: state.config,
         sessions: state.sessions,
         currentSessionId: state.currentSessionId,
       }),
+      onRehydrateStorage: () => async (state) => {
+        // 恢复数据后，解密 apiKey 并同步 config 到内存
+        if (state?.config) {
+          const decryptedKey = await decryptApiKey(state.config.apiKey || "");
+          const decryptedConfig = { ...state.config, apiKey: decryptedKey };
+          setAIConfig(decryptedConfig);
+          // 更新 store 中的明文配置（仅内存，不触发 persist）
+          useAIStore.setState({ config: decryptedConfig });
+        }
+      },
     }
   )
 );

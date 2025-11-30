@@ -12,12 +12,13 @@ import {
 import { cn } from "@/lib/utils";
 
 export function Ribbon() {
-  const { isDarkMode, toggleTheme, videoNoteOpen, toggleVideoNote } = useUIStore();
-  const { tabs, activeTabIndex, openGraphTab, switchTab } = useFileStore();
+  const { isDarkMode, toggleTheme } = useUIStore();
+  const { tabs, activeTabIndex, openGraphTab, switchTab, openVideoNoteTab } = useFileStore();
   
   // Check active tab type
   const activeTab = activeTabIndex >= 0 ? tabs[activeTabIndex] : null;
   const isGraphActive = activeTab?.type === "graph";
+  const isVideoActive = activeTab?.type === "video-note";
   
   // Find first file tab to switch to
   const handleSwitchToFiles = () => {
@@ -70,10 +71,19 @@ export function Ribbon() {
 
         {/* Video Note */}
         <button
-          onClick={toggleVideoNote}
+          onClick={() => {
+            // 如果已有视频标签页，切换过去
+            const videoTabIndex = tabs.findIndex(t => t.type === "video-note");
+            if (videoTabIndex >= 0) {
+              switchTab(videoTabIndex);
+            } else {
+              // 没有视频标签页，打开空白视频笔记页
+              openVideoNoteTab("", "视频笔记");
+            }
+          }}
           className={cn(
             "w-9 h-9 rounded-lg flex items-center justify-center transition-all",
-            videoNoteOpen
+            isVideoActive
               ? "bg-primary/10 text-primary"
               : "text-muted-foreground hover:text-foreground hover:bg-muted"
           )}

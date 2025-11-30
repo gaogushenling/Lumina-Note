@@ -335,7 +335,7 @@ function App() {
       </div>
 
       {/* Left Resize Handle + Collapse Button */}
-      <div className="relative flex-shrink-0">
+      <div className="relative flex-shrink-0 h-full">
         {leftSidebarOpen && (
           <ResizeHandle
             direction="left"
@@ -401,7 +401,7 @@ function App() {
       </main>
 
       {/* Right Resize Handle + Collapse Button */}
-      <div className="relative flex-shrink-0">
+      <div className="relative flex-shrink-0 h-full">
         {rightSidebarOpen && (
           <ResizeHandle
             direction="right"

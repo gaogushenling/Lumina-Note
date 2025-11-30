@@ -21,8 +21,10 @@ export function ResizeHandle({
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault();
+      e.stopPropagation();
       lastXRef.current = e.clientX;
       setIsDragging(true);
+      console.log("[ResizeHandle] Mouse down, starting drag");
       
       // 拖动时禁用侧边栏的过渡动画
       document.body.classList.add("resizing");
@@ -82,24 +84,25 @@ export function ResizeHandle({
   return (
     <div
       className={cn(
-        "group relative w-1 hover:w-1 flex-shrink-0 cursor-col-resize transition-all duration-150",
-        isDragging && "w-1",
+        "group relative w-1 h-full flex-shrink-0",
         className
       )}
-      onMouseDown={handleMouseDown}
-      onDoubleClick={onDoubleClick}
     >
-      {/* Visual indicator */}
+      {/* Visual indicator - 悬停和拖动时显示 */}
       <div
         className={cn(
-          "absolute inset-y-0 left-1/2 -translate-x-1/2 w-[3px] rounded-full transition-all duration-200",
-          "bg-transparent group-hover:bg-primary/30",
-          isDragging && "bg-primary/50 w-[3px]"
+          "absolute inset-y-0 left-1/2 -translate-x-1/2 w-[3px] rounded-full transition-colors duration-150 pointer-events-none",
+          "bg-border/30 group-hover:bg-primary/50",
+          isDragging && "bg-primary w-[4px]"
         )}
       />
       
-      {/* Hover area - larger hit target */}
-      <div className="absolute inset-y-0 -left-1 -right-1" />
+      {/* Clickable area - 这是实际的点击区域 */}
+      <div 
+        className="absolute inset-y-0 -left-3 -right-3 cursor-col-resize z-10"
+        onMouseDown={handleMouseDown}
+        onDoubleClick={onDoubleClick}
+      />
     </div>
   );
 }

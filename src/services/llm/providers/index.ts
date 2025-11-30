@@ -4,6 +4,7 @@
 
 export { AnthropicProvider } from "./anthropic";
 export { OpenAIProvider } from "./openai";
+export { GeminiProvider } from "./gemini";
 export { MoonshotProvider } from "./moonshot";
 export { DeepSeekProvider } from "./deepseek";
 export { GroqProvider } from "./groq";

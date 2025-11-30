@@ -26,7 +26,8 @@ export { getLLMConfig, setLLMConfig, resetLLMConfig } from "./config";
 // Providers
 export { 
   AnthropicProvider, 
-  OpenAIProvider, 
+  OpenAIProvider,
+  GeminiProvider,
   MoonshotProvider,
   DeepSeekProvider,
   GroqProvider,
@@ -40,7 +41,8 @@ import type { Message, LLMOptions, LLMResponse, LLMProvider, LLMStream } from ".
 import { getLLMConfig } from "./config";
 import { 
   AnthropicProvider, 
-  OpenAIProvider, 
+  OpenAIProvider,
+  GeminiProvider,
   MoonshotProvider,
   DeepSeekProvider,
   GroqProvider,
@@ -64,6 +66,8 @@ export function createProvider(): LLMProvider {
       return new AnthropicProvider(config);
     case "openai":
       return new OpenAIProvider(config);
+    case "gemini":
+      return new GeminiProvider(config);
     case "moonshot":
       return new MoonshotProvider(config);
     case "deepseek":

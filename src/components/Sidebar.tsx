@@ -3,7 +3,7 @@ import { useFileStore } from "@/stores/useFileStore";
 import { useRAGStore } from "@/stores/useRAGStore";
 import { FileEntry, deleteFile, renameFile, createFile, createDir, exists, openNewWindow } from "@/lib/tauri";
 import { invoke } from "@tauri-apps/api/core";
-import { ask, open } from "@tauri-apps/plugin-dialog";
+import { open } from "@tauri-apps/plugin-dialog";
 import { cn, getFileName } from "@/lib/utils";
 import { ContextMenu, MenuItem, menuItems } from "./ContextMenu";
 import {
@@ -122,17 +122,8 @@ export function Sidebar() {
     ];
   }, [handleOpenFolder, handleNewWindow]);
 
-  // Handle delete
+  // Handle delete - 直接移动到回收站，无需确认
   const handleDelete = useCallback(async (entry: FileEntry) => {
-    const yes = await ask(`确定要删除 "${entry.name}" 吗？\n此操作将把文件移至回收站。`, {
-      title: "删除确认",
-      kind: "warning",
-      okLabel: "删除",
-      cancelLabel: "取消",
-    });
-    
-    if (!yes) return;
-
     try {
       await deleteFile(entry.path);
       if (currentFile === entry.path) {
@@ -141,7 +132,6 @@ export function Sidebar() {
       refreshFileTree();
     } catch (error) {
       console.error("Delete failed:", error);
-      alert("删除失败");
     }
   }, [currentFile, closeFile, refreshFileTree]);
 

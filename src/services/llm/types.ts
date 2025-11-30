@@ -14,6 +14,7 @@ export interface Message {
 export type LLMProviderType = 
   | "anthropic" 
   | "openai" 
+  | "gemini"
   | "moonshot" 
   | "deepseek"
   | "groq"
@@ -111,6 +112,19 @@ export const PROVIDER_REGISTRY: Record<LLMProviderType, ProviderMeta> = {
       { id: "gpt-4-turbo", name: "GPT-4 Turbo", contextWindow: 128000 },
       { id: "gpt-4", name: "GPT-4", contextWindow: 8192 },
       { id: "gpt-3.5-turbo", name: "GPT-3.5 Turbo", contextWindow: 16385 },
+    ],
+  },
+  gemini: {
+    name: "gemini",
+    label: "Google Gemini",
+    description: "Gemini 系列模型",
+    defaultBaseUrl: "https://generativelanguage.googleapis.com/v1beta",
+    models: [
+      { id: "gemini-2.5-flash", name: "Gemini 2.5 Flash", contextWindow: 1000000 },
+      { id: "gemini-2.5-pro", name: "Gemini 2.5 Pro", contextWindow: 1000000 },
+      { id: "gemini-2.0-flash", name: "Gemini 2.0 Flash", contextWindow: 1000000 },
+      { id: "gemini-1.5-pro", name: "Gemini 1.5 Pro", contextWindow: 2000000 },
+      { id: "gemini-1.5-flash", name: "Gemini 1.5 Flash", contextWindow: 1000000 },
     ],
   },
   moonshot: {

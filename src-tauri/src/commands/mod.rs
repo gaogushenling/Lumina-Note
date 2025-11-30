@@ -1,5 +1,5 @@
 use crate::error::AppError;
-use crate::fs::{self, FileEntry};
+use crate::fs::{self, FileEntry, watcher};
 use tauri::{AppHandle, Manager, WebviewWindowBuilder, WebviewBuilder, LogicalPosition, LogicalSize, Position, Size};
 use tauri::WebviewUrl;
 use std::io::Read;
@@ -484,4 +484,12 @@ pub struct VideoTimeInfo {
     pub current_time: f64,
     pub duration: f64,
     pub paused: bool,
+}
+
+/// Start file system watcher
+/// Emits "fs:change" events when files are created, modified, or deleted
+#[tauri::command]
+pub async fn start_file_watcher(app: AppHandle, watch_path: String) -> Result<(), AppError> {
+    watcher::start_watcher(app, watch_path)
+        .map_err(|e| AppError::InvalidPath(e))
 }

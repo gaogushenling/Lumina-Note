@@ -38,11 +38,14 @@ pub fn start_watcher(app: AppHandle, watch_path: String) -> Result<(), String> {
         let _watcher = watcher;
 
         while let Ok(event) = rx.recv() {
-            // Only process .md files
+            // Process .md and .db.json files
             let paths: Vec<_> = event
                 .paths
                 .iter()
-                .filter(|p| p.extension().map_or(false, |ext| ext == "md"))
+                .filter(|p| {
+                    let path_str = p.to_string_lossy();
+                    path_str.ends_with(".md") || path_str.ends_with(".db.json")
+                })
                 .collect();
 
             if paths.is_empty() {

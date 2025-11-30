@@ -37,6 +37,7 @@ fn main() {
             commands::seek_video_time,
             commands::fill_danmaku_prefix,
             commands::setup_danmaku_autofill,
+            commands::start_file_watcher,
             // Vector DB commands
             vector_db::init_vector_db,
             vector_db::upsert_vector_chunks,

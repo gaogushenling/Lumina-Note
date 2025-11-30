@@ -120,3 +120,11 @@ export async function rename(oldPath: string, newPath: string): Promise<void> {
 export async function openNewWindow(): Promise<void> {
   return invoke("open_new_window");
 }
+
+/**
+ * Start file system watcher for a directory
+ * Emits "fs:change" events when files are created, modified, or deleted
+ */
+export async function startFileWatcher(watchPath: string): Promise<void> {
+  return invoke("start_file_watcher", { watchPath });
+}

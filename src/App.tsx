@@ -122,6 +122,45 @@ function App() {
       refreshFileTree().finally(() => setIsLoadingVault(false));
     }
   }, []);
+  
+  // 启动文件监听器，自动刷新文件树
+  useEffect(() => {
+    if (!vaultPath) return;
+    
+    let unlisten: (() => void) | null = null;
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    
+    const setupWatcher = async () => {
+      try {
+        const { listen } = await import("@tauri-apps/api/event");
+        const { startFileWatcher } = await import("@/lib/tauri");
+        
+        // 启动后端文件监听
+        await startFileWatcher(vaultPath);
+        console.log("[FileWatcher] Started watching:", vaultPath);
+        
+        // 监听文件变化事件（带防抖）
+        unlisten = await listen("fs:change", (event) => {
+          console.log("[FileWatcher] File changed:", event.payload);
+          
+          // 防抖：500ms 内多次变化只刷新一次
+          if (debounceTimer) clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(() => {
+            refreshFileTree();
+          }, 500);
+        });
+      } catch (error) {
+        console.warn("[FileWatcher] Failed to start:", error);
+      }
+    };
+    
+    setupWatcher();
+    
+    return () => {
+      if (unlisten) unlisten();
+      if (debounceTimer) clearTimeout(debounceTimer);
+    };
+  }, [vaultPath, refreshFileTree]);
   const {
     leftSidebarOpen,
     rightSidebarOpen,

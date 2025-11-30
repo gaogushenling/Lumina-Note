@@ -1,5 +1,4 @@
 mod manager;
-mod watcher;
+pub mod watcher;
 
 pub use manager::*;
-pub use watcher::*;

@@ -10,24 +10,56 @@ import {
   Video,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { exists } from "@/lib/tauri";
 
 export function Ribbon() {
   const { isDarkMode, toggleTheme, videoNoteOpen, toggleVideoNote, setVideoNoteOpen } = useUIStore();
-  const { tabs, activeTabIndex, openGraphTab, switchTab, createNewFile } = useFileStore();
+  const { tabs, activeTabIndex, openGraphTab, switchTab, recentFiles, openFile, fileTree } = useFileStore();
   
   // Check active tab type
   const activeTab = activeTabIndex >= 0 ? tabs[activeTabIndex] : null;
   const isGraphActive = activeTab?.type === "graph";
   
   // Find first file tab to switch to
-  const handleSwitchToFiles = () => {
+  const handleSwitchToFiles = async () => {
     setVideoNoteOpen(false);
     const fileTabIndex = tabs.findIndex(tab => tab.type === "file");
     if (fileTabIndex !== -1) {
       switchTab(fileTabIndex);
-    } else if (isGraphActive) {
-      // If currently in graph and no files open, create a new one to switch view
-      createNewFile();
+      return;
+    }
+
+    // If no files open (whether in graph view or empty state), try to open recent file
+    if (recentFiles && recentFiles.length > 0) {
+      // Iterate backwards to find the most recent existing file
+      for (let i = recentFiles.length - 1; i >= 0; i--) {
+        const path = recentFiles[i];
+        try {
+          if (await exists(path)) {
+            await openFile(path);
+            return;
+          }
+        } catch (e) {
+          console.warn(`Failed to check existence of ${path}:`, e);
+        }
+      }
+    }
+    
+    // Fallback: Open the first file in the file tree
+    const findFirstFile = (entries: typeof fileTree): string | null => {
+      for (const entry of entries) {
+        if (!entry.is_dir) return entry.path;
+        if (entry.children) {
+          const found = findFirstFile(entry.children);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+
+    const firstFile = findFirstFile(fileTree);
+    if (firstFile) {
+      openFile(firstFile);
     }
   };
 

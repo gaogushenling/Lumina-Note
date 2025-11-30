@@ -57,6 +57,9 @@ interface FileState {
   navigationHistory: string[];
   navigationIndex: number;
 
+  // Recent files history
+  recentFiles: string[];
+
   // Loading states
   isLoadingTree: boolean;
   isLoadingFile: boolean;
@@ -131,6 +134,7 @@ export const useFileStore = create<FileState>()(
   // Navigation history
   navigationHistory: [],
   navigationIndex: -1,
+  recentFiles: [],
 
   // Set vault path and load file tree
   setVaultPath: async (path: string) => {
@@ -243,6 +247,14 @@ export const useFileStore = create<FileState>()(
           newNavIndex = newHistory.length - 1;
         }
       }
+
+      // 更新最近文件列表
+      const { recentFiles } = get();
+      let newRecentFiles = recentFiles.filter(p => p !== path);
+      newRecentFiles.push(path);
+      if (newRecentFiles.length > 20) {
+        newRecentFiles = newRecentFiles.slice(-20);
+      }
       
       set({ 
         tabs: newTabs,
@@ -256,6 +268,7 @@ export const useFileStore = create<FileState>()(
         lastSavedContent: content,
         navigationHistory: newHistory,
         navigationIndex: newNavIndex,
+        recentFiles: newRecentFiles,
       });
     } catch (error) {
       console.error("Failed to open file:", error);
@@ -771,6 +784,7 @@ export const useFileStore = create<FileState>()(
       name: "lumina-workspace",
       partialize: (state) => ({
         vaultPath: state.vaultPath,  // 只持久化工作空间路径
+        recentFiles: state.recentFiles, // 持久化最近文件列表
       }),
     }
   )

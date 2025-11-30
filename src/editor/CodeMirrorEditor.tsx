@@ -14,7 +14,7 @@ import {
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { syntaxTree } from "@codemirror/language";
-import { oneDark } from "@codemirror/theme-one-dark";
+// 不再需要 oneDark，使用 CSS 变量自动适应主题
 import katex from "katex";
 import { common, createLowlight } from "lowlight";
 
@@ -36,8 +36,8 @@ export interface CodeMirrorEditorRef {
   scrollToLine: (line: number) => void;
 }
 
-// 自定义主题 - 浅色模式
-const lightTheme = EditorView.theme({
+// 自定义主题 - 使用 CSS 变量支持主题切换
+const editorTheme = EditorView.theme({
   "&": {
     backgroundColor: "transparent",
     fontSize: "16px",
@@ -46,50 +46,110 @@ const lightTheme = EditorView.theme({
   ".cm-content": {
     fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
     padding: "16px 0",
-    caretColor: "hsl(221.2 83.2% 53.3%)",
+    caretColor: "hsl(var(--primary))",
   },
   ".cm-line": {
     padding: "0 16px",
     lineHeight: "1.75",
   },
   ".cm-cursor": {
-    borderLeftColor: "hsl(221.2 83.2% 53.3%)",
+    borderLeftColor: "hsl(var(--primary))",
     borderLeftWidth: "2px",
   },
   ".cm-selectionBackground": {
-    backgroundColor: "hsl(221.2 83.2% 53.3% / 0.2) !important",
+    backgroundColor: "hsl(var(--primary) / 0.2) !important",
   },
   "&.cm-focused .cm-selectionBackground": {
-    backgroundColor: "hsl(221.2 83.2% 53.3% / 0.3) !important",
+    backgroundColor: "hsl(var(--primary) / 0.3) !important",
   },
   ".cm-gutters": {
     display: "none",
   },
-  // Markdown 样式
-  ".cm-header-1": { fontSize: "2em", fontWeight: "700", lineHeight: "1.3" },
-  ".cm-header-2": { fontSize: "1.5em", fontWeight: "600", lineHeight: "1.4" },
-  ".cm-header-3": { fontSize: "1.25em", fontWeight: "600", lineHeight: "1.5" },
-  ".cm-header-4": { fontSize: "1.1em", fontWeight: "600" },
-  ".cm-strong": { fontWeight: "700" },
-  ".cm-emphasis": { fontStyle: "italic" },
+  // Markdown 标题 - 使用主题变量
+  ".cm-header-1": { 
+    fontSize: "2em", 
+    fontWeight: "700", 
+    lineHeight: "1.3",
+    color: "hsl(var(--md-heading, var(--foreground)))",
+  },
+  ".cm-header-2": { 
+    fontSize: "1.5em", 
+    fontWeight: "600", 
+    lineHeight: "1.4",
+    color: "hsl(var(--md-heading, var(--foreground)))",
+  },
+  ".cm-header-3": { 
+    fontSize: "1.25em", 
+    fontWeight: "600", 
+    lineHeight: "1.5",
+    color: "hsl(var(--md-heading, var(--foreground)))",
+  },
+  ".cm-header-4": { 
+    fontSize: "1.1em", 
+    fontWeight: "600",
+    color: "hsl(var(--md-heading, var(--foreground)))",
+  },
+  ".cm-header-5, .cm-header-6": {
+    fontWeight: "600",
+    color: "hsl(var(--md-heading, var(--foreground)))",
+  },
+  // 粗体/斜体
+  ".cm-strong": { 
+    fontWeight: "700",
+    color: "hsl(var(--md-bold, var(--foreground)))",
+  },
+  ".cm-emphasis": { 
+    fontStyle: "italic",
+    color: "hsl(var(--md-italic, var(--foreground)))",
+  },
   ".cm-strikethrough": { textDecoration: "line-through" },
-  ".cm-link": { color: "hsl(221.2 83.2% 53.3%)", textDecoration: "underline" },
-  ".cm-url": { color: "hsl(215.4 16.3% 46.9%)" },
-  ".cm-code": {
-    backgroundColor: "hsl(210 40% 96.1%)",
+  // 链接
+  ".cm-link": { 
+    color: "hsl(var(--md-link, var(--primary)))", 
+    textDecoration: "underline",
+  },
+  ".cm-url": { 
+    color: "hsl(var(--muted-foreground))",
+  },
+  // 代码
+  ".cm-code, .cm-inline-code": {
+    backgroundColor: "hsl(var(--md-code-bg, var(--muted)))",
+    color: "hsl(var(--md-code, var(--foreground)))",
     padding: "2px 4px",
     borderRadius: "3px",
-    fontFamily: "monospace",
+    fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+  },
+  // 代码块
+  ".cm-codeblock": {
+    backgroundColor: "hsl(var(--md-code-block-bg, var(--muted)))",
+    color: "hsl(var(--md-code-block, var(--foreground)))",
+  },
+  // 引用
+  ".cm-quote": {
+    color: "hsl(var(--md-blockquote, var(--muted-foreground)))",
+    fontStyle: "italic",
+  },
+  // 列表标记
+  ".cm-list-bullet, .cm-list-number": {
+    color: "hsl(var(--md-list-marker, var(--primary)))",
   },
   // Live Preview 隐藏的语法标记
   ".cm-formatting": {
-    color: "hsl(215.4 16.3% 70%)",
+    color: "hsl(var(--muted-foreground) / 0.6)",
   },
   ".cm-formatting-hidden": {
     fontSize: "0",
     width: "0",
     display: "inline-block",
     overflow: "hidden",
+  },
+  // 标签
+  ".cm-tag, .cm-hashtag": {
+    color: "hsl(var(--md-tag, var(--primary)))",
+  },
+  // 水平线
+  ".cm-hr": {
+    color: "hsl(var(--md-hr, var(--border)))",
   },
   // 数学公式样式
   ".cm-math-inline": {
@@ -103,7 +163,7 @@ const lightTheme = EditorView.theme({
     overflow: "auto",
   },
   ".cm-math-error": {
-    color: "red",
+    color: "hsl(0 70% 50%)",
     fontFamily: "monospace",
   },
 });
@@ -250,7 +310,8 @@ class CodeBlockWidget extends WidgetType {
   }
 
   ignoreEvent() {
-    return true;
+    // 返回 false 允许点击事件传递，这样点击代码块时可以进入编辑模式
+    return false;
   }
 }
 
@@ -688,8 +749,7 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditor
         history(),
         keymap.of([...defaultKeymap, ...historyKeymap]),
         markdown({ base: markdownLanguage }),
-        lightTheme,
-        isDark ? oneDark : [],
+        editorTheme,  // 使用 CSS 变量，自动适应主题
         // 实时预览模式：隐藏语法标记、渲染数学公式、渲染表格、渲染代码块
         // 源码模式：显示原始 Markdown
         ...(livePreview ? [livePreviewPlugin, mathStateField, tableStateField, codeBlockStateField] : []),

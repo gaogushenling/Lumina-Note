@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { applyTheme, getThemeById } from "@/lib/themes";
 
 // Editor modes similar to Obsidian
 export type EditorMode = "reading" | "live" | "source";
@@ -13,7 +14,9 @@ export type AIPanelMode = "docked" | "floating";
 interface UIState {
   // Theme
   isDarkMode: boolean;
+  themeId: string;
   toggleTheme: () => void;
+  setThemeId: (id: string) => void;
 
   // Panels
   leftSidebarOpen: boolean;
@@ -74,6 +77,7 @@ export const useUIStore = create<UIState>()(
     (set) => ({
       // Theme - default to light mode
       isDarkMode: false,
+      themeId: "default",
       toggleTheme: () =>
         set((state) => {
           const newMode = !state.isDarkMode;
@@ -83,7 +87,20 @@ export const useUIStore = create<UIState>()(
           } else {
             document.documentElement.classList.remove("dark");
           }
+          // Apply theme colors
+          const theme = getThemeById(state.themeId);
+          if (theme) {
+            applyTheme(theme, newMode);
+          }
           return { isDarkMode: newMode };
+        }),
+      setThemeId: (id: string) =>
+        set((state) => {
+          const theme = getThemeById(id);
+          if (theme) {
+            applyTheme(theme, state.isDarkMode);
+          }
+          return { themeId: id };
         }),
 
       // Panels
@@ -151,9 +168,15 @@ export const useUIStore = create<UIState>()(
         return rest;
       },
       onRehydrateStorage: () => (state) => {
-        // Apply theme on hydration
+        // Apply dark mode class on hydration
         if (state?.isDarkMode) {
           document.documentElement.classList.add("dark");
+        }
+        // Apply saved theme on hydration (or default theme)
+        const themeId = state?.themeId || "default";
+        const theme = getThemeById(themeId);
+        if (theme) {
+          applyTheme(theme, state?.isDarkMode || false);
         }
         // 强制重置视频笔记状态（不应从 localStorage 恢复）
         if (state) {

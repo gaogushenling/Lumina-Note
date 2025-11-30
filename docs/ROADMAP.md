@@ -1,6 +1,6 @@
 # Lumina Note 开发路线图
 
-> 最后更新：2025-06-01
+> 最后更新：2025-12-01
 
 ---
 
@@ -53,7 +53,7 @@
 - ✅ 圆形软边界（自然聚集效果）
 
 ### AI 功能 🤖
-- ✅ **多模型支持**：Anthropic、OpenAI、DeepSeek、Moonshot、Groq、OpenRouter、Ollama
+- ✅ **多模型支持**：Anthropic、OpenAI、DeepSeek、Moonshot、Groq、OpenRouter、Ollama、Gemini
 - ✅ **Agent 系统**：4 种模式（editor/organizer/researcher/writer）
 - ✅ **7 个 Agent 工具**：read_note、edit_note、write_note、list_notes、move_note、search_notes、attempt_completion
 - ✅ **RAG 系统**：向量嵌入、SQLite 存储、语义搜索
@@ -64,6 +64,14 @@
 - ✅ **全屏设置面板**：AI 设置 + Agent 设置 + RAG 设置统一管理
 - ✅ **自定义模型**：支持自定义模型 ID 和 Base URL（第三方代理）
 - ✅ **智能会话管理**：避免创建重复空白会话
+- ✅ **Retry 重新生成**：Agent 和 Chat 都支持重新生成回复
+
+### UI/主题系统 🎨
+- ✅ **自定义标题栏**：支持深浅色主题，带拖拽和窗口控制
+- ✅ **设置面板**：中央弹窗式设置界面
+- ✅ **主题系统**：11 套官方主题（默认/海洋/森林/薰衣草/玫瑰/落日/薄荷/靛青/拿铁/极光/极简）
+- ✅ **Markdown 主题**：主题影响标题/链接/代码块/引用等 17 种 Markdown 元素颜色
+- ✅ **主题开发文档**：支持社区开发自定义主题
 
 ### 数据库（Dataview 风格）✅
 - ✅ **YAML frontmatter 驱动**：笔记即数据，双向同步
@@ -271,7 +279,9 @@ AI:   "已更新！驾车约 20 分钟。"
 ### Phase 5: 体验增强
 - [ ] 日记功能 - 每日笔记、日历视图
 - [ ] 模板系统 - 模板变量、快速插入
-- [ ] 主题系统 - CSS 主题
+- [x] **主题系统** - ✅ 11 套官方主题 + 社区主题支持
+- [x] **设置面板** - ✅ 中央弹窗式设置
+- [x] **Retry 功能** - ✅ Agent/Chat 重新生成
 - [ ] 全文索引 - Rust tantivy
 
 ### Phase 6: 生态建设（长期）

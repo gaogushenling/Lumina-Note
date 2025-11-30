@@ -225,8 +225,22 @@ export function parseMarkdown(markdown: string): string {
     });
 
     // 3. Preprocess other things (WikiLinks, Tags)
-    // We reuse the logic from preprocessMarkdown but without the math part
-    // Or we can just inline the logic here for simplicity and correctness
+    // 先保护代码块和行内代码，避免内部内容被错误处理
+    const codeBlockPlaceholders: string[] = [];
+    const codeBlockPrefix = "⟦CODE_BLOCK_";
+    const codeBlockSuffix = "⟧";
+    
+    // 保护代码块 ```...```
+    processed = processed.replace(/```[\s\S]*?```/g, (match) => {
+      codeBlockPlaceholders.push(match);
+      return `${codeBlockPrefix}${codeBlockPlaceholders.length - 1}${codeBlockSuffix}`;
+    });
+    
+    // 保护行内代码 `...`
+    processed = processed.replace(/`[^`\n]+`/g, (match) => {
+      codeBlockPlaceholders.push(match);
+      return `${codeBlockPrefix}${codeBlockPlaceholders.length - 1}${codeBlockSuffix}`;
+    });
     
     // WikiLinks
     processed = processed.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_match, link, display) => {
@@ -235,9 +249,15 @@ export function parseMarkdown(markdown: string): string {
       return `<span class="wikilink" data-wikilink="${linkName}">${displayText}</span>`;
     });
     
-    // Tags
+    // Tags (只在非代码区域处理)
     processed = processed.replace(/(?<![`\w\/])#([a-zA-Z\u4e00-\u9fa5][a-zA-Z0-9\u4e00-\u9fa5_-]*)/g, (_match, tag) => {
       return `<span class="tag" data-tag="${tag}">#${tag}</span>`;
+    });
+    
+    // 恢复代码块
+    codeBlockPlaceholders.forEach((code, index) => {
+      const placeholder = `${codeBlockPrefix}${index}${codeBlockSuffix}`;
+      processed = processed.split(placeholder).join(code);
     });
 
     // 4. Parse with Marked

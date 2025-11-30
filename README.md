@@ -67,9 +67,17 @@ Lumina Note 不仅仅是一个编辑器，它是一个集成了 LLM 能力的知
 
 > 💡 技术亮点：使用 Tauri 2.0 多 WebView 功能实现真正的内嵌播放，突破 iframe 的 CSRF 限制
 
+### 🎨 主题系统
+| 功能 | 描述 |
+| :--- | :--- |
+| **11 套官方主题** | 默认/海洋/森林/薰衣草/玫瑰/落日/薄荷/靛青/拿铁/极光/极简 |
+| **深浅色自适应** | 每套主题自动适配深色/浅色模式 |
+| **Markdown 颜色** | 主题影响标题/链接/代码块/引用等 17 种元素 |
+| **自定义标题栏** | 跟随主题变色，带拖拽和窗口控制 |
+
 ### 🔌 多模型生态
 支持接入主流 LLM Provider，自由切换模型：
-> `Anthropic` · `OpenAI` · `DeepSeek` · `Moonshot` · `Groq` · `Ollama (Local)`
+> `Anthropic` · `OpenAI` · `Gemini` · `DeepSeek` · `Moonshot` · `Groq` · `Ollama (Local)`
 
 ---
 
@@ -160,13 +168,14 @@ graph TD
 
 ## 🗺️ Roadmap
 
-- [x] **Core**: 多 LLM Provider 接入支持
+- [x] **Core**: 多 LLM Provider 接入支持（8 个提供商）
 - [x] **Agent**: 具备工具调用能力的 AI Agent 系统
 - [x] **RAG**: 本地向量数据库与语义检索
 - [x] **UI**: AI 悬浮球与流式响应交互
 - [x] **Video**: B站视频笔记（内嵌 WebView + 弹幕同步）
 - [x] **STT**: 语音转文字（流式显示 + 自动停止 + 录音动画）
-- [ ] **Feature**: 历史会话持久化存储
+- [x] **Theme**: 11 套官方主题 + Markdown 颜色自定义
+- [x] **Settings**: 中央弹窗式设置面板
 - [ ] **Feature**: 插件系统 API 设计
 - [ ] **Sync**: WebDAV / Git 同步支持
 

@@ -378,6 +378,10 @@ body {
   line-height: 1.75;
 }
 
+/* 标题样式 - 使用主题颜色 */
+.prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
+  color: hsl(var(--md-heading, var(--foreground)));
+}
 .prose h1 { font-size: 2rem; font-weight: 700; margin: 1.5rem 0 1rem; }
 .prose h2 { font-size: 1.5rem; font-weight: 600; margin: 1.5rem 0 0.75rem; }
 .prose h3 { font-size: 1.25rem; font-weight: 600; margin: 1.25rem 0 0.5rem; }
@@ -385,54 +389,81 @@ body {
 
 .prose p { margin: 0.75rem 0; }
 
+/* 列表样式 */
 .prose ul, .prose ol {
   padding-left: 1.5rem;
   margin: 0.75rem 0;
 }
-
 .prose li { margin: 0.25rem 0; }
+.prose li::marker {
+  color: hsl(var(--md-list-marker, var(--primary)));
+}
 
+/* 引用块 */
 .prose blockquote {
-  border-left: 3px solid hsl(var(--primary));
+  border-left: 3px solid hsl(var(--md-blockquote-border, var(--primary)));
   padding-left: 1rem;
   margin: 1rem 0;
-  color: hsl(var(--muted-foreground));
+  color: hsl(var(--md-blockquote, var(--muted-foreground)));
   font-style: italic;
 }
 
+/* 分割线 */
 .prose hr {
   border: none;
-  border-top: 1px solid hsl(var(--border));
+  border-top: 1px solid hsl(var(--md-hr, var(--border)));
   margin: 2rem 0;
 }
 
+/* 行内代码 */
 .prose code {
-  background: hsl(var(--muted));
+  background: hsl(var(--md-code-bg, var(--muted)));
+  color: hsl(var(--md-code, var(--foreground)));
   padding: 0.2rem 0.4rem;
   border-radius: 0.25rem;
   font-size: 0.875rem;
   font-family: "JetBrains Mono", "Fira Code", monospace;
 }
 
+/* 代码块 */
 .prose pre {
-  background: hsl(var(--muted));
+  background: hsl(var(--md-code-block-bg, var(--muted)));
   padding: 1rem;
   border-radius: 0.5rem;
   overflow-x: auto;
   margin: 1rem 0;
 }
-
 .prose pre code {
   background: transparent;
+  color: hsl(var(--md-code-block, var(--foreground)));
   padding: 0;
 }
 
-.prose strong { font-weight: 600; }
+/* 粗体和斜体 */
+.prose strong { 
+  font-weight: 600; 
+  color: hsl(var(--md-bold, var(--foreground)));
+}
+.prose em {
+  color: hsl(var(--md-italic, var(--foreground)));
+}
 
+/* 链接 */
 .prose a {
-  color: hsl(var(--primary));
+  color: hsl(var(--md-link, var(--primary)));
   text-decoration: underline;
   text-underline-offset: 2px;
+  transition: color 0.15s;
+}
+.prose a:hover {
+  color: hsl(var(--md-link-hover, var(--primary)));
+}
+
+/* 高亮 */
+.prose mark {
+  background: hsl(var(--md-highlight, 50 80% 85%));
+  padding: 0.1rem 0.2rem;
+  border-radius: 0.125rem;
 }
 
 /* WikiLink styles */
@@ -448,7 +479,7 @@ body {
   border-bottom-style: solid;
 }
 
-/* Table styles */
+/* Table styles - 使用主题变量 */
 .prose table {
   width: 100%;
   border-collapse: collapse;
@@ -471,26 +502,26 @@ body {
 }
 
 .prose th {
-  background: hsl(var(--muted));
+  background: hsl(var(--md-table-header-bg, var(--muted)));
   font-weight: 600;
   text-align: left;
   padding: 0.75rem;
-  border: 1px solid hsl(var(--border));
+  border: 1px solid hsl(var(--md-table-border, var(--border)));
   white-space: nowrap;
 }
 
 .prose td {
   padding: 0.75rem;
-  border: 1px solid hsl(var(--border));
+  border: 1px solid hsl(var(--md-table-border, var(--border)));
   min-width: 100px;
 }
 
 .prose tr:nth-child(even) {
-  background: hsl(var(--muted) / 0.3);
+  background: hsl(var(--md-table-header-bg, var(--muted)) / 0.3);
 }
 
 .prose tr:hover {
-  background: hsl(var(--muted) / 0.5);
+  background: hsl(var(--md-table-header-bg, var(--muted)) / 0.5);
 }
 
 /* Live preview block styles */

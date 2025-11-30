@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useUIStore } from "@/stores/useUIStore";
 import { useFileStore } from "@/stores/useFileStore";
 import {
@@ -12,8 +13,10 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { exists } from "@/lib/tauri";
+import { SettingsModal } from "./SettingsModal";
 
 export function Ribbon() {
+  const [showSettings, setShowSettings] = useState(false);
   const { isDarkMode, toggleTheme } = useUIStore();
   const { tabs, activeTabIndex, openGraphTab, switchTab, openVideoNoteTab, recentFiles, openFile, fileTree } = useFileStore();
   
@@ -157,12 +160,19 @@ export function Ribbon() {
 
         {/* Settings */}
         <button
+          onClick={() => setShowSettings(true)}
           className="w-9 h-9 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
-          title="设置 (开发中)"
+          title="设置"
         >
           <Settings size={20} />
         </button>
       </div>
+
+      {/* Settings Modal */}
+      <SettingsModal 
+        isOpen={showSettings} 
+        onClose={() => setShowSettings(false)} 
+      />
     </div>
   );
 }

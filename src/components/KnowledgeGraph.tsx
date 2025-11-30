@@ -691,7 +691,7 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
       });
       setHoverNode(hovered ? hovered.id : null);
       if (canvasRef.current) {
-        canvasRef.current.style.cursor = hovered ? "pointer" : "grab";
+        canvasRef.current.style.cursor = hovered ? "pointer" : "crosshair";
       }
     }
 
@@ -983,7 +983,7 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
               handleNodeClick(selectedNode);
             }
           }}
-          className="block w-full h-full cursor-grab active:cursor-grabbing"
+          className="block w-full h-full cursor-crosshair active:cursor-move"
         />
         
         {/* 右键菜单 */}

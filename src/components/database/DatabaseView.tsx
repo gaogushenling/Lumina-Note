@@ -1,0 +1,87 @@
+import { useEffect, useMemo } from "react";
+import { useDatabaseStore } from "@/stores/useDatabaseStore";
+import { TableView } from "./TableView";
+import { KanbanView } from "./KanbanView";
+import { DatabaseToolbar } from "./DatabaseToolbar";
+import { Database } from "lucide-react";
+
+interface DatabaseViewProps {
+  dbId: string;
+  className?: string;
+}
+
+export function DatabaseView({ dbId, className = "" }: DatabaseViewProps) {
+  const { databases, loadDatabase, setCurrentDb } = useDatabaseStore();
+  
+  // 加载数据库
+  useEffect(() => {
+    if (!databases[dbId]) {
+      loadDatabase(dbId);
+    }
+    setCurrentDb(dbId);
+    
+    return () => {
+      // 切换时可以选择是否清除当前数据库
+    };
+  }, [dbId, databases, loadDatabase, setCurrentDb]);
+  
+  const db = databases[dbId];
+  const activeView = useMemo(() => {
+    if (!db) return null;
+    return db.views.find(v => v.id === db.activeViewId) || db.views[0];
+  }, [db]);
+  
+  if (!db) {
+    return (
+      <div className={`flex items-center justify-center h-full ${className}`}>
+        <div className="text-muted-foreground animate-pulse">
+          加载数据库中...
+        </div>
+      </div>
+    );
+  }
+  
+  return (
+    <div className={`flex flex-col h-full bg-background ${className}`}>
+      {/* 数据库头部 */}
+      <div className="flex-shrink-0 px-6 py-4 border-b border-border">
+        <div className="flex items-center gap-3">
+          {db.icon ? (
+            <span className="text-2xl">{db.icon}</span>
+          ) : (
+            <Database className="w-6 h-6 text-muted-foreground" />
+          )}
+          <h1 className="text-xl font-semibold">{db.name}</h1>
+        </div>
+        {db.description && (
+          <p className="mt-1 text-sm text-muted-foreground">{db.description}</p>
+        )}
+      </div>
+      
+      {/* 工具栏 */}
+      <DatabaseToolbar dbId={dbId} />
+      
+      {/* 视图内容 */}
+      <div className="flex-1 overflow-hidden">
+        {activeView?.type === 'table' && (
+          <TableView dbId={dbId} />
+        )}
+        {activeView?.type === 'kanban' && (
+          <KanbanView dbId={dbId} />
+        )}
+        {activeView?.type === 'calendar' && (
+          <div className="flex items-center justify-center h-full text-muted-foreground">
+            日历视图即将推出
+          </div>
+        )}
+        {activeView?.type === 'gallery' && (
+          <div className="flex items-center justify-center h-full text-muted-foreground">
+            画廊视图即将推出
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default DatabaseView;

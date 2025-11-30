@@ -20,6 +20,8 @@ import {
   FilePlus,
   FolderPlus,
   AppWindow,
+  Database,
+  Image,
 } from "lucide-react";
 
 interface ContextMenuState {
@@ -36,7 +38,7 @@ interface CreatingState {
 }
 
 export function Sidebar() {
-  const { vaultPath, fileTree, currentFile, openFile, refreshFileTree, isLoadingTree, closeFile } =
+  const { vaultPath, fileTree, currentFile, openFile, refreshFileTree, isLoadingTree, closeFile, openDatabaseTab } =
     useFileStore();
   const { isDarkMode, toggleTheme } = useUIStore();
   
@@ -373,9 +375,17 @@ export function Sidebar() {
   const handleSelect = useCallback((entry: FileEntry) => {
     setSelectedPath(entry.path);
     if (!entry.is_dir) {
-      openFile(entry.path);
+      // 检查是否是数据库文件
+      if (entry.name.endsWith('.db.json')) {
+        // 从文件名提取数据库 ID（去掉 .db.json 后缀）
+        const dbId = entry.name.replace('.db.json', '');
+        const dbName = dbId; // 可以后续从文件内容读取真实名称
+        openDatabaseTab(dbId, dbName);
+      } else {
+        openFile(entry.path);
+      }
     }
-  }, [openFile]);
+  }, [openFile, openDatabaseTab]);
 
   return (
     <aside className="w-full h-full border-r border-border flex flex-col bg-muted/30 dark:bg-[#252526] transition-colors duration-300">
@@ -448,7 +458,7 @@ export function Sidebar() {
         )}
         {fileTree.length === 0 && !creating ? (
           <div className="px-4 py-8 text-center text-muted-foreground text-sm">
-            未找到 Markdown 文件
+            文件夹为空
           </div>
         ) : (
           fileTree.map((entry) => (
@@ -759,6 +769,18 @@ function FileTreeItem({
     );
   }
 
+  // 根据文件类型显示不同图标
+  const getFileIcon = () => {
+    const name = entry.name.toLowerCase();
+    if (name.endsWith('.db.json')) {
+      return <Database className="w-4 h-4 text-blue-500 shrink-0" />;
+    }
+    if (name.endsWith('.png') || name.endsWith('.jpg') || name.endsWith('.jpeg') || name.endsWith('.gif') || name.endsWith('.webp')) {
+      return <Image className="w-4 h-4 text-green-500 shrink-0" />;
+    }
+    return <File className="w-4 h-4 text-muted-foreground shrink-0" />;
+  };
+
   return (
     <div
       role="button"
@@ -774,7 +796,7 @@ function FileTreeItem({
       )}
       style={{ paddingLeft: paddingLeft + 20 }}
     >
-      <File className="w-4 h-4 text-muted-foreground shrink-0" />
+      {getFileIcon()}
       <span className="truncate">{getFileName(entry.name)}</span>
     </div>
   );

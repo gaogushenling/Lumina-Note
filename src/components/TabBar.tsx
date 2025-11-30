@@ -1,6 +1,6 @@
 import { useCallback, useState, useRef } from "react";
 import { useFileStore, Tab } from "@/stores/useFileStore";
-import { X, FileText, Network, Video } from "lucide-react";
+import { X, FileText, Network, Video, Database } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface TabItemProps {
@@ -46,6 +46,8 @@ function TabItem({
         <Network size={12} className="shrink-0 text-primary" />
       ) : tab.type === "video-note" ? (
         <Video size={12} className="shrink-0 text-red-500" />
+      ) : tab.type === "database" ? (
+        <Database size={12} className="shrink-0 text-blue-500" />
       ) : (
         <FileText size={12} className="shrink-0 opacity-60" />
       )}

@@ -18,6 +18,7 @@ import { TabBar } from "@/components/TabBar";
 import { DiffView } from "@/components/DiffView";
 import { AIFloatingBall } from "@/components/AIFloatingBall";
 import { VideoNoteView } from "@/components/VideoNoteView";
+import { DatabaseView, CreateDatabaseDialog } from "@/components/database";
 import { useAIStore } from "@/stores/useAIStore";
 import { saveFile } from "@/lib/tauri";
 
@@ -112,6 +113,7 @@ function App() {
   const [paletteMode, setPaletteMode] = useState<PaletteMode>("command");
   const [searchOpen, setSearchOpen] = useState(false);
   const [isLoadingVault, setIsLoadingVault] = useState(false);
+  const [createDbOpen, setCreateDbOpen] = useState(false);
   
   // 启动时自动加载保存的工作空间
   useEffect(() => {
@@ -216,11 +218,14 @@ function App() {
   useEffect(() => {
     const onOpenVault = () => handleOpenVault();
     const onOpenSearch = () => setSearchOpen(true);
+    const onOpenCreateDb = () => setCreateDbOpen(true);
     window.addEventListener("open-vault", onOpenVault);
     window.addEventListener("open-global-search", onOpenSearch);
+    window.addEventListener("open-create-database", onOpenCreateDb);
     return () => {
       window.removeEventListener("open-vault", onOpenVault);
       window.removeEventListener("open-global-search", onOpenSearch);
+      window.removeEventListener("open-create-database", onOpenCreateDb);
     };
   }, [handleOpenVault, setSearchOpen]);
 
@@ -320,6 +325,12 @@ function App() {
         {pendingDiff ? (
           // Show diff view when there's a pending AI edit
           <DiffViewWrapper />
+        ) : activeTab?.type === "database" && activeTab.databaseId ? (
+          // 数据库标签页
+          <div className="flex-1 flex flex-col overflow-hidden bg-background">
+            <TabBar />
+            <DatabaseView dbId={activeTab.databaseId} className="flex-1" />
+          </div>
         ) : activeTab?.type === "video-note" ? (
           // 视频笔记标签页
           <div className="flex-1 flex flex-col overflow-hidden bg-background">
@@ -392,6 +403,12 @@ function App() {
     <GlobalSearch
       isOpen={searchOpen}
       onClose={() => setSearchOpen(false)}
+    />
+    
+    {/* Create Database Dialog */}
+    <CreateDatabaseDialog
+      isOpen={createDbOpen}
+      onClose={() => setCreateDbOpen(false)}
     />
     
     {/* AI Floating Ball */}

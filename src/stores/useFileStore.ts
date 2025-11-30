@@ -11,7 +11,7 @@ interface HistoryEntry {
 }
 
 // 标签页类型
-export type TabType = "file" | "graph" | "isolated-graph" | "video-note";
+export type TabType = "file" | "graph" | "isolated-graph" | "video-note" | "database";
 
 // 孤立视图节点信息
 export interface IsolatedNodeInfo {
@@ -33,6 +33,7 @@ export interface Tab {
   redoStack: HistoryEntry[];
   isolatedNode?: IsolatedNodeInfo; // 孤立视图的目标节点
   videoUrl?: string; // 视频笔记的 URL
+  databaseId?: string; // 数据库 ID
 }
 
 interface FileState {
@@ -88,6 +89,7 @@ interface FileState {
   openGraphTab: () => void;
   openIsolatedGraphTab: (node: IsolatedNodeInfo) => void;
   openVideoNoteTab: (url: string, title?: string) => void;
+  openDatabaseTab: (dbId: string, dbName: string) => void;
   
   // Undo/Redo actions
   undo: () => void;
@@ -621,6 +623,77 @@ export const useFileStore = create<FileState>()(
     };
     
     updatedTabs.push(videoTab);
+    
+    set({
+      tabs: updatedTabs,
+      activeTabIndex: updatedTabs.length - 1,
+      currentFile: null,
+      currentContent: "",
+      isDirty: false,
+    });
+  },
+
+  // 打开数据库标签页
+  openDatabaseTab: (dbId: string, dbName: string) => {
+    const { tabs, activeTabIndex, currentContent, isDirty, undoStack, redoStack } = get();
+    
+    // 检查是否已有此数据库的标签页
+    const existingDbIndex = tabs.findIndex(t => t.type === "database" && t.databaseId === dbId);
+    
+    if (existingDbIndex >= 0) {
+      // 已有此数据库标签页，直接切换
+      let updatedTabs = [...tabs];
+      
+      // 保存当前标签页状态
+      if (activeTabIndex >= 0 && tabs[activeTabIndex]) {
+        updatedTabs[activeTabIndex] = {
+          ...updatedTabs[activeTabIndex],
+          content: currentContent,
+          isDirty,
+          undoStack,
+          redoStack,
+        };
+      }
+      
+      set({
+        tabs: updatedTabs,
+        activeTabIndex: existingDbIndex,
+        currentFile: null,
+        currentContent: "",
+        isDirty: false,
+      });
+      return;
+    }
+    
+    // 创建新数据库标签页
+    const tabId = `__database_${dbId}__`;
+    
+    // 保存当前标签页状态
+    let updatedTabs = [...tabs];
+    if (activeTabIndex >= 0 && tabs[activeTabIndex]) {
+      updatedTabs[activeTabIndex] = {
+        ...updatedTabs[activeTabIndex],
+        content: currentContent,
+        isDirty,
+        undoStack,
+        redoStack,
+      };
+    }
+    
+    // 创建数据库标签页
+    const dbTab: Tab = {
+      id: tabId,
+      type: "database",
+      path: "",
+      name: dbName,
+      content: "",
+      isDirty: false,
+      undoStack: [],
+      redoStack: [],
+      databaseId: dbId,
+    };
+    
+    updatedTabs.push(dbTab);
     
     set({
       tabs: updatedTabs,

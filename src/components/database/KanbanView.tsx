@@ -1,0 +1,215 @@
+import { useState, useMemo } from "react";
+import { useDatabaseStore } from "@/stores/useDatabaseStore";
+import type { DatabaseRow } from "@/types/database";
+import { SELECT_COLORS } from "@/types/database";
+import { Plus, MoreHorizontal, GripVertical } from "lucide-react";
+
+interface KanbanViewProps {
+  dbId: string;
+}
+
+export function KanbanView({ dbId }: KanbanViewProps) {
+  const {
+    databases,
+    addRow,
+    updateCell,
+    getFilteredSortedRows,
+  } = useDatabaseStore();
+  
+  const db = databases[dbId];
+  const rows = useMemo(() => getFilteredSortedRows(dbId), [dbId, getFilteredSortedRows, db?.rows, db?.views]);
+  
+  const [draggedCard, setDraggedCard] = useState<string | null>(null);
+  const [dragOverGroup, setDragOverGroup] = useState<string | null>(null);
+  
+  if (!db) return null;
+  
+  const activeView = db.views.find(v => v.id === db.activeViewId);
+  const groupByColumnId = activeView?.groupBy;
+  
+  // 找到分组列
+  const groupColumn = db.columns.find(c => c.id === groupByColumnId);
+  
+  if (!groupColumn || (groupColumn.type !== 'select' && groupColumn.type !== 'multi-select')) {
+    return (
+      <div className="flex items-center justify-center h-full text-muted-foreground">
+        <div className="text-center">
+          <p>请先设置分组列</p>
+          <p className="text-sm mt-1">看板视图需要一个 Select 类型的列作为分组依据</p>
+        </div>
+      </div>
+    );
+  }
+  
+  const options = groupColumn.options || [];
+  
+  // 按分组整理数据
+  const groupedRows: Record<string, DatabaseRow[]> = {};
+  const ungroupedRows: DatabaseRow[] = [];
+  
+  // 初始化所有分组
+  options.forEach(opt => {
+    groupedRows[opt.id] = [];
+  });
+  
+  // 分配行到分组
+  rows.forEach(row => {
+    const cellValue = row.cells[groupByColumnId!];
+    if (typeof cellValue === 'string' && groupedRows[cellValue]) {
+      groupedRows[cellValue].push(row);
+    } else {
+      ungroupedRows.push(row);
+    }
+  });
+  
+  // 拖放处理
+  const handleDragStart = (e: React.DragEvent, rowId: string) => {
+    setDraggedCard(rowId);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+  
+  const handleDragOver = (e: React.DragEvent, groupId: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverGroup(groupId);
+  };
+  
+  const handleDragLeave = () => {
+    setDragOverGroup(null);
+  };
+  
+  const handleDrop = (e: React.DragEvent, groupId: string) => {
+    e.preventDefault();
+    if (draggedCard && groupByColumnId) {
+      updateCell(dbId, draggedCard, groupByColumnId, groupId);
+    }
+    setDraggedCard(null);
+    setDragOverGroup(null);
+  };
+  
+  const handleAddCardToGroup = (groupId: string) => {
+    if (groupByColumnId) {
+      addRow(dbId, { [groupByColumnId]: groupId });
+    }
+  };
+  
+  // 获取卡片标题（第一个 text 列）
+  const titleColumn = db.columns.find(c => c.type === 'text');
+  
+  return (
+    <div className="h-full overflow-x-auto p-4">
+      <div className="flex gap-4 h-full min-w-max">
+        {/* 各分组列 */}
+        {options.map((option) => {
+          const colors = SELECT_COLORS[option.color];
+          const groupRows = groupedRows[option.id] || [];
+          
+          return (
+            <div
+              key={option.id}
+              className={`flex flex-col w-72 rounded-lg transition-colors ${
+                dragOverGroup === option.id ? 'bg-accent' : 'bg-muted/30'
+              }`}
+              onDragOver={(e) => handleDragOver(e, option.id)}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, option.id)}
+            >
+              {/* 分组头部 */}
+              <div className="flex items-center gap-2 p-3">
+                <span className={`px-2 py-0.5 rounded text-sm font-medium ${colors.bg} ${colors.text}`}>
+                  {option.name}
+                </span>
+                <span className="text-sm text-muted-foreground">{groupRows.length}</span>
+                <div className="flex-1" />
+                <button className="p-1 rounded hover:bg-accent">
+                  <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+                </button>
+              </div>
+              
+              {/* 卡片列表 */}
+              <div className="flex-1 overflow-y-auto px-2 pb-2 space-y-2">
+                {groupRows.map((row) => (
+                  <KanbanCard
+                    key={row.id}
+                    row={row}
+                    titleColumnId={titleColumn?.id}
+                    isDragging={draggedCard === row.id}
+                    onDragStart={(e) => handleDragStart(e, row.id)}
+                  />
+                ))}
+                
+                {/* 新建卡片 */}
+                <button
+                  onClick={() => handleAddCardToGroup(option.id)}
+                  className="w-full p-2 rounded-md border border-dashed border-border text-sm text-muted-foreground hover:border-primary hover:text-primary transition-colors flex items-center justify-center gap-1"
+                >
+                  <Plus className="w-4 h-4" /> 新建
+                </button>
+              </div>
+            </div>
+          );
+        })}
+        
+        {/* 未分组 */}
+        {ungroupedRows.length > 0 && (
+          <div
+            className={`flex flex-col w-72 rounded-lg transition-colors ${
+              dragOverGroup === 'ungrouped' ? 'bg-accent' : 'bg-muted/30'
+            }`}
+            onDragOver={(e) => handleDragOver(e, 'ungrouped')}
+            onDragLeave={handleDragLeave}
+          >
+            <div className="flex items-center gap-2 p-3">
+              <span className="px-2 py-0.5 rounded text-sm font-medium bg-muted text-muted-foreground">
+                未分组
+              </span>
+              <span className="text-sm text-muted-foreground">{ungroupedRows.length}</span>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto px-2 pb-2 space-y-2">
+              {ungroupedRows.map((row) => (
+                <KanbanCard
+                  key={row.id}
+                  row={row}
+                  titleColumnId={titleColumn?.id}
+                  isDragging={draggedCard === row.id}
+                  onDragStart={(e) => handleDragStart(e, row.id)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// 看板卡片组件
+interface KanbanCardProps {
+  row: DatabaseRow;
+  titleColumnId?: string;
+  isDragging: boolean;
+  onDragStart: (e: React.DragEvent) => void;
+}
+
+function KanbanCard({ row, titleColumnId, isDragging, onDragStart }: KanbanCardProps) {
+  const title = titleColumnId ? (row.cells[titleColumnId] as string) || '无标题' : '无标题';
+  
+  return (
+    <div
+      draggable
+      onDragStart={onDragStart}
+      className={`bg-background p-3 rounded-lg border border-border shadow-sm cursor-grab active:cursor-grabbing transition-all ${
+        isDragging ? 'opacity-50 scale-95' : 'hover:shadow-md'
+      }`}
+    >
+      <div className="flex items-start gap-2">
+        <GripVertical className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5 opacity-0 group-hover:opacity-100" />
+        <div className="flex-1 min-w-0">
+          <p className="font-medium truncate">{title}</p>
+          {/* 可以添加更多字段预览 */}
+        </div>
+      </div>
+    </div>
+  );
+}

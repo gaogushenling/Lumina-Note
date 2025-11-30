@@ -1,6 +1,5 @@
 use std::fs;
 use std::path::Path;
-use walkdir::WalkDir;
 use serde::Serialize;
 
 use crate::error::AppError;
@@ -31,7 +30,7 @@ pub fn write_file_content(path: &str, content: &str) -> Result<(), AppError> {
     fs::write(path, content).map_err(AppError::from)
 }
 
-/// List directory contents recursively (only .md files)
+/// List directory contents recursively (all files)
 pub fn list_dir_recursive(path: &str) -> Result<Vec<FileEntry>, AppError> {
     let root = Path::new(path);
     if !root.exists() {
@@ -52,11 +51,16 @@ pub fn list_dir_recursive(path: &str) -> Result<Vec<FileEntry>, AppError> {
         if name.starts_with('.') {
             continue;
         }
+        
+        // Skip node_modules and other common non-user directories
+        if name == "node_modules" || name == "target" || name == ".git" {
+            continue;
+        }
 
         if path.is_dir() {
             let children = list_dir_recursive(&path.to_string_lossy())?;
-            // Only include directories that have .md files
-            if !children.is_empty() || has_md_files(&path) {
+            // Include all non-empty directories
+            if !children.is_empty() {
                 entries.push(FileEntry {
                     name,
                     path: path.to_string_lossy().to_string(),
@@ -64,7 +68,8 @@ pub fn list_dir_recursive(path: &str) -> Result<Vec<FileEntry>, AppError> {
                     children: Some(children),
                 });
             }
-        } else if name.ends_with(".md") {
+        } else {
+            // Include all files
             entries.push(FileEntry {
                 name,
                 path: path.to_string_lossy().to_string(),
@@ -84,13 +89,6 @@ pub fn list_dir_recursive(path: &str) -> Result<Vec<FileEntry>, AppError> {
     });
 
     Ok(entries)
-}
-
-fn has_md_files(dir: &Path) -> bool {
-    WalkDir::new(dir)
-        .into_iter()
-        .filter_map(|e| e.ok())
-        .any(|e| e.path().extension().map_or(false, |ext| ext == "md"))
 }
 
 /// Create a new .md file

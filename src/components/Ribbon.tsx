@@ -8,6 +8,7 @@ import {
   Sun,
   Moon,
   Video,
+  Database,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { exists } from "@/lib/tauri";
@@ -20,6 +21,7 @@ export function Ribbon() {
   const activeTab = activeTabIndex >= 0 ? tabs[activeTabIndex] : null;
   const isGraphActive = activeTab?.type === "graph";
   const isVideoActive = activeTab?.type === "video-note";
+  const isDatabaseActive = activeTab?.type === "database";
   
   // Find first file tab to switch to
   const handleSwitchToFiles = async () => {
@@ -122,6 +124,20 @@ export function Ribbon() {
           title="视频笔记"
         >
           <Video size={20} />
+        </button>
+
+        {/* Database */}
+        <button
+          onClick={() => window.dispatchEvent(new CustomEvent("open-create-database"))}
+          className={cn(
+            "w-9 h-9 rounded-lg flex items-center justify-center transition-all",
+            isDatabaseActive
+              ? "bg-primary/10 text-primary"
+              : "text-muted-foreground hover:text-foreground hover:bg-muted"
+          )}
+          title="数据库"
+        >
+          <Database size={20} />
         </button>
       </div>
 

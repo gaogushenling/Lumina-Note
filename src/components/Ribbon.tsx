@@ -10,10 +10,11 @@ import {
   Video,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { exists } from "@/lib/tauri";
 
 export function Ribbon() {
   const { isDarkMode, toggleTheme } = useUIStore();
-  const { tabs, activeTabIndex, openGraphTab, switchTab, openVideoNoteTab } = useFileStore();
+  const { tabs, activeTabIndex, openGraphTab, switchTab, openVideoNoteTab, recentFiles, openFile, fileTree } = useFileStore();
   
   // Check active tab type
   const activeTab = activeTabIndex >= 0 ? tabs[activeTabIndex] : null;
@@ -21,10 +22,43 @@ export function Ribbon() {
   const isVideoActive = activeTab?.type === "video-note";
   
   // Find first file tab to switch to
-  const handleSwitchToFiles = () => {
+  const handleSwitchToFiles = async () => {
     const fileTabIndex = tabs.findIndex(tab => tab.type === "file");
     if (fileTabIndex !== -1) {
       switchTab(fileTabIndex);
+      return;
+    }
+
+    // If no files open, try to open recent file
+    if (recentFiles && recentFiles.length > 0) {
+      for (let i = recentFiles.length - 1; i >= 0; i--) {
+        const path = recentFiles[i];
+        try {
+          if (await exists(path)) {
+            await openFile(path);
+            return;
+          }
+        } catch (e) {
+          console.warn(`Failed to check existence of ${path}:`, e);
+        }
+      }
+    }
+    
+    // Fallback: Open the first file in the file tree
+    const findFirstFile = (entries: typeof fileTree): string | null => {
+      for (const entry of entries) {
+        if (!entry.is_dir) return entry.path;
+        if (entry.children) {
+          const found = findFirstFile(entry.children);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+
+    const firstFile = findFirstFile(fileTree);
+    if (firstFile) {
+      openFile(firstFile);
     }
   };
 
@@ -37,7 +71,7 @@ export function Ribbon() {
           onClick={handleSwitchToFiles}
           className={cn(
             "w-9 h-9 rounded-lg flex items-center justify-center transition-all",
-            !isGraphActive
+            !isGraphActive && !isVideoActive
               ? "bg-primary/10 text-primary"
               : "text-muted-foreground hover:text-foreground hover:bg-muted"
           )}
@@ -72,12 +106,10 @@ export function Ribbon() {
         {/* Video Note */}
         <button
           onClick={() => {
-            // 如果已有视频标签页，切换过去
             const videoTabIndex = tabs.findIndex(t => t.type === "video-note");
             if (videoTabIndex >= 0) {
               switchTab(videoTabIndex);
             } else {
-              // 没有视频标签页，打开空白视频笔记页
               openVideoNoteTab("", "视频笔记");
             }
           }}

@@ -179,16 +179,6 @@ export function AgentPanel() {
             <span className="text-xs text-muted-foreground">
               {MODES[mode].name}
             </span>
-            {status === "running" && (
-              <button
-                onClick={abort}
-                className="bg-red-500 hover:bg-red-600 text-white rounded px-2 py-1 text-xs transition-colors flex items-center gap-1"
-                title="停止"
-              >
-                <Square size={12} />
-                停止
-              </button>
-            )}
           </div>
 
           <div className="bg-muted/30 border border-border rounded-lg p-2 focus-within:ring-1 focus-within:ring-primary/50 transition-all">
@@ -228,13 +218,17 @@ export function AgentPanel() {
                   {isRecording ? <MicOff size={14} className="relative z-10" /> : <Mic size={14} />}
                 </button>
                 <button
-                  onClick={() => handleSendWithFiles(input, [])}
-                  disabled={!input.trim() || status === "running"}
-                  className="bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground rounded p-1.5 transition-colors flex items-center justify-center"
-                  title="发送"
+                  onClick={() => status === "running" ? abort() : handleSendWithFiles(input, [])}
+                  disabled={(!input.trim() && status !== "running")}
+                  className={`${
+                    status === "running" 
+                      ? "bg-red-500 hover:bg-red-600 text-white" 
+                      : "bg-primary hover:bg-primary/90 text-primary-foreground"
+                  } disabled:opacity-50 rounded p-1.5 transition-colors flex items-center justify-center`}
+                  title={status === "running" ? "停止" : "发送"}
                 >
                   {status === "running" ? (
-                    <Loader2 size={14} className="animate-spin" />
+                    <Square size={14} fill="currentColor" />
                   ) : (
                     <Send size={14} />
                   )}

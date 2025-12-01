@@ -52,15 +52,13 @@ export function PDFViewer({ filePath, className }: PDFViewerProps) {
         setError(null);
         const data = await readFile(filePath);
         if (!cancelled) {
-          // 创建持久化的数据副本
-          const buffer = new ArrayBuffer(data.byteLength);
-          const copiedData = new Uint8Array(buffer);
-          copiedData.set(data);
-          setPdfData(copiedData);
+          // 不要共享 ArrayBuffer，直接存储原始数据
+          setPdfData(data);
           setLoading(false);
           
-          // 自动解析 PDF 结构（使用模拟数据）
-          parseStructure(filePath, 'none');
+          // 自动解析 PDF 结构
+          // 'none': 模拟数据, 'pp-structure': PP-Structure 服务
+          parseStructure(filePath, 'pp-structure');
         }
       } catch (err) {
         console.error("Failed to read PDF file:", err);
@@ -115,24 +113,28 @@ export function PDFViewer({ filePath, className }: PDFViewerProps) {
   }, [selectedElements]);
 
   // 为不同组件创建独立的数据副本，避免 ArrayBuffer detached 错误
+  // 每个副本都有独立的 ArrayBuffer
   const pdfDataForSearch = useMemo(() => {
     if (!pdfData) return null;
-    const copy = new Uint8Array(pdfData.byteLength);
-    copy.set(pdfData);
+    const buffer = new ArrayBuffer(pdfData.byteLength);
+    const copy = new Uint8Array(buffer);
+    copy.set(new Uint8Array(pdfData.buffer, pdfData.byteOffset, pdfData.byteLength));
     return copy;
   }, [pdfData]);
 
   const pdfDataForSidebar = useMemo(() => {
     if (!pdfData) return null;
-    const copy = new Uint8Array(pdfData.byteLength);
-    copy.set(pdfData);
+    const buffer = new ArrayBuffer(pdfData.byteLength);
+    const copy = new Uint8Array(buffer);
+    copy.set(new Uint8Array(pdfData.buffer, pdfData.byteOffset, pdfData.byteLength));
     return copy;
   }, [pdfData]);
 
   const pdfDataForCanvas = useMemo(() => {
     if (!pdfData) return null;
-    const copy = new Uint8Array(pdfData.byteLength);
-    copy.set(pdfData);
+    const buffer = new ArrayBuffer(pdfData.byteLength);
+    const copy = new Uint8Array(buffer);
+    copy.set(new Uint8Array(pdfData.buffer, pdfData.byteOffset, pdfData.byteLength));
     return copy;
   }, [pdfData]);
 

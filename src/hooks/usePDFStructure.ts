@@ -30,11 +30,11 @@ export function usePDFStructure() {
           fromCache: false,
         };
       } else {
-        // 使用真实的解析服务
+        // 使用真实的解析服务（不管 backend 名称，都调用本地服务）
         result = await parsePDF({
           pdfPath,
           config: {
-            backend,
+            backend: 'pp-structure',
             ppStructure: {
               apiUrl: 'http://localhost:8080/parse',
               layoutAnalysis: true,

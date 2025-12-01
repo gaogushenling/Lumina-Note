@@ -92,13 +92,15 @@ export function PDFCanvas({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [currentPage, numPages, onPageChange]);
 
-  // 准备 PDF 数据源（使用 useMemo 避免不必要的重渲染）
+  // 创建 PDF 数据源（避免 ArrayBuffer detached）
   const pdfSource = useMemo(() => {
-    if (filePath.startsWith("http")) {
-      return filePath;
-    }
-    return pdfData ? { data: pdfData } : null;
-  }, [filePath, pdfData]);
+    if (!pdfData) return null;
+    // 确保每次都是新的副本，独立的 ArrayBuffer
+    const buffer = new ArrayBuffer(pdfData.byteLength);
+    const copy = new Uint8Array(buffer);
+    copy.set(new Uint8Array(pdfData.buffer, pdfData.byteOffset, pdfData.byteLength));
+    return { data: copy };
+  }, [pdfData]);
 
   if (error) {
     return (

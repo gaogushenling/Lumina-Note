@@ -146,11 +146,9 @@ function ThumbnailsContent({
   }
 
   // 创建独立副本避免 ArrayBuffer detached
+  // 使用 slice 创建真正独立的副本
   const pdfDataCopy = useMemo(() => {
-    const buffer = new ArrayBuffer(pdfData.byteLength);
-    const copy = new Uint8Array(buffer);
-    copy.set(pdfData);
-    return copy;
+    return pdfData.slice(0);
   }, [pdfData]);
 
   return (

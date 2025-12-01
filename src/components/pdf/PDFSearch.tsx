@@ -36,9 +36,8 @@ export function PDFSearch({
     const loadDoc = async () => {
       try {
         // 创建独立副本避免 ArrayBuffer detached
-        const buffer = new ArrayBuffer(pdfData.byteLength);
-        const copy = new Uint8Array(buffer);
-        copy.set(pdfData);
+        // 使用 slice 创建真正独立的副本
+        const copy = pdfData.slice(0);
         
         const loadingTask = pdfjs.getDocument({ data: copy });
         const doc = await loadingTask.promise;

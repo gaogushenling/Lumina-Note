@@ -24,7 +24,7 @@ export function ElementPanel({
   }
 
   return (
-    <div className={cn("bg-background border-l border-border flex flex-col", className)}>
+    <div className={cn("bg-background border-l border-border flex flex-col h-full", className)}>
       {/* 头部 */}
       <div className="h-10 flex items-center justify-between px-3 border-b border-border shrink-0">
         <div className="flex items-center gap-2">
@@ -40,8 +40,8 @@ export function ElementPanel({
         </button>
       </div>
 
-      {/* 元素列表 */}
-      <div className="flex-1 overflow-y-auto p-2 space-y-2">
+      {/* 元素列表 - 限制高度，确保按钮可见 */}
+      <div className="flex-1 overflow-y-auto p-2 space-y-2 min-h-0" style={{ maxHeight: 'calc(100vh - 300px)' }}>
         {elements.map((element) => (
           <div
             key={element.id}
@@ -86,18 +86,18 @@ export function ElementPanel({
         ))}
       </div>
 
-      {/* 操作按钮 */}
-      <div className="p-2 border-t border-border space-y-2 shrink-0">
+      {/* 操作按钮 - 固定在底部 */}
+      <div className="p-4 pb-8 border-t border-border space-y-2 shrink-0 bg-background">
         <button
           onClick={onCopyAsReference}
-          className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm bg-accent hover:bg-accent/80 rounded transition-colors"
+          className="w-full flex items-center justify-center gap-2 px-3 py-2.5 text-sm bg-accent hover:bg-accent/80 rounded transition-colors"
         >
           <Copy size={14} />
           <span>复制为引用</span>
         </button>
         <button
           onClick={onChatWithAI}
-          className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm bg-primary text-primary-foreground hover:bg-primary/90 rounded transition-colors"
+          className="w-full flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium bg-primary text-white hover:bg-primary/90 rounded transition-colors"
         >
           <MessageSquare size={14} />
           <span>与 AI 对话</span>

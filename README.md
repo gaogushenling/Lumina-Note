@@ -67,6 +67,21 @@ Lumina Note 不仅仅是一个编辑器，它是一个集成了 LLM 能力的知
 
 > 💡 技术亮点：使用 Tauri 2.0 多 WebView 功能实现真正的内嵌播放，突破 iframe 的 CSRF 限制
 
+### 📄 PDF 智能阅读器
+为学术工作流优化的 PDF 阅读和标注系统。
+
+| 功能 | 描述 |
+| :--- | :--- |
+| **交互式元素识别** | 自动识别文本、图片、表格等元素，支持悬浮高亮和点击选中 |
+| **多选与框选** | Ctrl+点击多选元素，或框选区域批量选择 |
+| **元素管理面板** | 查看已选元素详情，支持类型分类和页码定位 |
+| **复制为引用** | 一键将选中内容格式化为引用格式（含页码和类型标记） |
+| **与 AI 对话** | 将选中的 PDF 内容发送给 AI，进行摘要、翻译或解释 |
+| **缩略图与目录** | 侧边栏显示页面缩略图和文档大纲，快速跳转 |
+| **全文搜索** | 支持在 PDF 中搜索关键词，实时高亮匹配结果 |
+
+> 💡 技术亮点：使用 PyMuPDF 进行文本位置提取，支持扩展到 PP-Structure 深度学习模型进行更精确的版面分析
+
 ### 🎨 主题系统
 | 功能 | 描述 |
 | :--- | :--- |
@@ -152,6 +167,37 @@ graph TD
     npm run tauri build
     ```
 
+### PDF 元素识别功能（可选）
+
+如果需要使用 PDF 智能识别功能（交互式元素选择），需要启动后端解析服务：
+
+1.  **安装 Python 依赖**（首次使用）
+    ```bash
+    cd scripts
+    pip install flask flask-cors pymupdf
+    ```
+
+2.  **启动 PDF 解析服务**
+    ```bash
+    python simple_pdf_server.py
+    ```
+    服务将在 `http://localhost:8080` 启动。
+
+3.  **在应用中使用**
+    - 打开任意 PDF 文件
+    - 点击右上角 **"交互模式"** 按钮（闪电图标）
+    - 鼠标悬浮在文本/图片上即可看到高亮
+    - 点击元素选中，Ctrl+点击多选
+    - 右侧元素面板可复制引用或与 AI 对话
+
+> **进阶选项**：如需更精确的版面分析（表格、公式识别），可使用 PP-Structure：
+> ```bash
+> cd scripts
+> pip install -r requirements-pp-structure.txt
+> python pp_structure_server.py
+> ```
+> 详见 [`docs/PP_STRUCTURE_SETUP.md`](docs/PP_STRUCTURE_SETUP.md)
+
 ---
 
 ## ⌨️ 快捷键指南
@@ -176,8 +222,10 @@ graph TD
 - [x] **STT**: 语音转文字（流式显示 + 自动停止 + 录音动画）
 - [x] **Theme**: 11 套官方主题 + Markdown 颜色自定义
 - [x] **Settings**: 中央弹窗式设置面板
+- [x] **PDF**: PDF 智能阅读器（元素识别 + 交互选择 + AI 对话）
 - [ ] **Feature**: 插件系统 API 设计
 - [ ] **Sync**: WebDAV / Git 同步支持
+- [ ] **PDF Advanced**: 表格识别、公式识别、深度学习版面分析
 
 ---
 
@@ -188,14 +236,20 @@ lumina-note/
 ├── src/
 │   ├── agent/           # AI Agent 核心逻辑 (Core, Tools, Prompts)
 │   ├── components/      # React UI 组件
+│   │   └── pdf/         # PDF 阅读器组件
 │   ├── editor/          # CodeMirror 编辑器配置与扩展
 │   ├── services/        # LLM 客户端与 RAG 服务层
+│   │   └── pdf/         # PDF 解析服务
+│   ├── hooks/           # 自定义 React Hooks
 │   └── stores/          # Zustand 状态管理
 ├── src-tauri/
 │   └── src/
 │       ├── commands/    # 暴露给前端的 Rust 命令
 │       ├── fs/          # 文件系统操作封装
 │       └── vector_db/   # SQLite 向量存储逻辑
+├── scripts/             # Python 后端服务
+│   ├── simple_pdf_server.py      # 简化版 PDF 解析（推荐）
+│   └── pp_structure_server.py    # PP-Structure 深度学习版
 └── package.json
 ```
 

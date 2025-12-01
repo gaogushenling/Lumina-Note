@@ -13,21 +13,34 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
 import fitz  # PyMuPDF
-from paddleocr import PPStructure
+try:
+    from paddleocr import PPStructure
+except ImportError:
+    # 新版本使用 PaddleOCR
+    from paddleocr import PaddleOCR
+    PPStructure = None
 import json
 from typing import List, Dict, Any
 
 app = Flask(__name__)
 CORS(app)  # 允许跨域
 
-# 初始化 PP-Structure
-# layout=True 启用版面分析, table=True 启用表格识别
-pp_structure = PPStructure(
-    layout=True,
-    table=True,
-    ocr=True,
-    show_log=False
-)
+# 初始化 PP-Structure 或 PaddleOCR
+if PPStructure:
+    # 旧版本
+    pp_structure = PPStructure(
+        layout=True,
+        table=True,
+        ocr=True,
+        show_log=False
+    )
+else:
+    # 新版本使用 PaddleOCR
+    pp_structure = PaddleOCR(
+        use_angle_cls=True,
+        lang='ch',
+        show_log=False
+    )
 
 def pdf_to_images(pdf_path: str) -> List[tuple]:
     """

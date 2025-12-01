@@ -38,7 +38,8 @@ export function InteractiveLayer({
 
   // 过滤当前页的元素
   const pageElements = elements.filter(el => el.pageIndex === pageIndex);
-
+  
+  
   // 处理鼠标进入元素
   const handleMouseEnter = useCallback((elementId: string) => {
     if (!isDragging) {
@@ -126,6 +127,7 @@ export function InteractiveLayer({
       style={{
         width: `${pageWidth * scale}px`,
         height: `${pageHeight * scale}px`,
+        zIndex: 10,
       }}
       onMouseDown={handleMouseDown}
     >

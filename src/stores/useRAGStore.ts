@@ -6,6 +6,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { RAGManager, RAGConfig, DEFAULT_RAG_CONFIG, IndexStatus, SearchResult } from "@/services/rag";
 import { encryptApiKey, decryptApiKey } from "@/lib/crypto";
+import { useFileStore } from "./useFileStore";
 
 interface RAGState {
   // 配置
@@ -119,11 +120,24 @@ export const useRAGStore = create<RAGState>()(
 
       // 重建索引
       rebuildIndex: async () => {
-        const { ragManager } = get();
+        let { ragManager } = get();
         
+        // 如果未初始化，自动获取 vaultPath 并初始化
         if (!ragManager) {
-          set({ lastError: "RAG 系统未初始化" });
-          return;
+          const vaultPath = useFileStore.getState().vaultPath;
+          if (!vaultPath) {
+            set({ lastError: "请先打开一个工作区" });
+            return;
+          }
+          
+          console.log("[RAG] Auto-initializing with vaultPath:", vaultPath);
+          await get().initialize(vaultPath);
+          ragManager = get().ragManager;
+          
+          if (!ragManager) {
+            set({ lastError: "RAG 系统初始化失败" });
+            return;
+          }
         }
 
         try {
@@ -143,6 +157,8 @@ export const useRAGStore = create<RAGState>()(
           const newStatus = await ragManager.getStatus();
           set({ indexStatus: newStatus, isIndexing: false });
         } catch (error) {
+          const errorMsg = error instanceof Error ? error.message : "索引失败";
+          set({ lastError: errorMsg, isIndexing: false });
           console.error("[RAG] Rebuild error:", error);
         }
       },

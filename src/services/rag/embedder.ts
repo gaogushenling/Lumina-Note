@@ -7,6 +7,8 @@ import type { EmbeddingResult, BatchEmbeddingResult, RAGConfig } from "./types";
 
 export class Embedder {
   private config: RAGConfig;
+  // 缓存 Ollama API 版本检测结果: 'new' | 'legacy' | null
+  private ollamaApiVersion: 'new' | 'legacy' | null = null;
 
   constructor(config: RAGConfig) {
     this.config = config;
@@ -147,16 +149,62 @@ export class Embedder {
   }
 
   /**
-   * Ollama embedding API
+   * Ollama embedding API (自动兼容新旧版本)
+   * 新版: /api/embed + input 字段 + embeddings 数组返回
+   * 旧版: /api/embeddings + prompt 字段 + embedding 单个返回
    */
   private async embedOllama(text: string): Promise<EmbeddingResult> {
     const baseUrl = this.config.embeddingBaseUrl || "http://localhost:11434";
     
+    // 如果已知 API 版本，直接使用
+    if (this.ollamaApiVersion === 'legacy') {
+      return this.embedOllamaLegacy(text, baseUrl);
+    }
+    
+    // 尝试新版 API
+    try {
+      const response = await fetch(`${baseUrl}/api/embed`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: this.config.embeddingModel,
+          input: text,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        this.ollamaApiVersion = 'new';
+        return { embedding: data.embeddings[0] };
+      }
+      
+      // 如果 404，回退到旧版
+      if (response.status === 404) {
+        console.log('[Embedder] Ollama /api/embed not found, falling back to legacy /api/embeddings');
+        this.ollamaApiVersion = 'legacy';
+        return this.embedOllamaLegacy(text, baseUrl);
+      }
+      
+      const error = await response.text();
+      throw new Error(`Ollama Embedding API 错误: ${error}`);
+    } catch (e) {
+      // 网络错误或其他错误，尝试旧版
+      if (this.ollamaApiVersion === null) {
+        console.log('[Embedder] Trying legacy Ollama API...');
+        this.ollamaApiVersion = 'legacy';
+        return this.embedOllamaLegacy(text, baseUrl);
+      }
+      throw e;
+    }
+  }
+
+  /**
+   * Ollama 旧版 API (/api/embeddings)
+   */
+  private async embedOllamaLegacy(text: string, baseUrl: string): Promise<EmbeddingResult> {
     const response = await fetch(`${baseUrl}/api/embeddings`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         model: this.config.embeddingModel,
         prompt: text,
@@ -169,23 +217,63 @@ export class Embedder {
     }
 
     const data = await response.json();
-    return {
-      embedding: data.embedding,
-    };
+    return { embedding: data.embedding };
   }
 
   /**
-   * Ollama 批量 embedding (逐个调用)
+   * Ollama 批量 embedding (自动兼容新旧版本)
    */
   private async embedBatchOllama(texts: string[]): Promise<BatchEmbeddingResult> {
-    // Ollama 不支持批量 API，需要逐个调用
-    const embeddings: number[][] = [];
+    const baseUrl = this.config.embeddingBaseUrl || "http://localhost:11434";
     
+    // 如果已知是旧版，逐个调用
+    if (this.ollamaApiVersion === 'legacy') {
+      return this.embedBatchOllamaLegacy(texts, baseUrl);
+    }
+    
+    // 尝试新版 API (支持批量)
+    try {
+      const response = await fetch(`${baseUrl}/api/embed`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: this.config.embeddingModel,
+          input: texts,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        this.ollamaApiVersion = 'new';
+        return { embeddings: data.embeddings };
+      }
+      
+      if (response.status === 404) {
+        console.log('[Embedder] Ollama /api/embed not found, falling back to legacy');
+        this.ollamaApiVersion = 'legacy';
+        return this.embedBatchOllamaLegacy(texts, baseUrl);
+      }
+      
+      const error = await response.text();
+      throw new Error(`Ollama Embedding API 错误: ${error}`);
+    } catch (e) {
+      if (this.ollamaApiVersion === null) {
+        this.ollamaApiVersion = 'legacy';
+        return this.embedBatchOllamaLegacy(texts, baseUrl);
+      }
+      throw e;
+    }
+  }
+
+  /**
+   * Ollama 旧版批量 embedding (逐个调用)
+   */
+  private async embedBatchOllamaLegacy(texts: string[], baseUrl: string): Promise<BatchEmbeddingResult> {
+    const embeddings: number[][] = [];
     for (const text of texts) {
-      const result = await this.embedOllama(text);
+      const result = await this.embedOllamaLegacy(text, baseUrl);
       embeddings.push(result.embedding);
     }
-
     return { embeddings };
   }
 }

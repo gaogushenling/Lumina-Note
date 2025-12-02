@@ -350,6 +350,7 @@ export function RightPanel() {
     indexStatus,
     rebuildIndex,
     cancelIndex,
+    lastError: ragError,
   } = useRAGStore();
   const { autoApprove, setAutoApprove, checkFirstLoad: checkAgentFirstLoad } = useAgentStore();
   
@@ -928,10 +929,16 @@ export function RightPanel() {
                           {indexStatus.totalFiles} 个文件, {indexStatus.totalChunks} 个块
                         </div>
                       )}
+
+                      {ragError && (
+                        <div className="text-xs text-red-500">
+                          {ragError}
+                        </div>
+                      )}
                       
                       <button
                         onClick={() => rebuildIndex()}
-                        disabled={ragIsIndexing || !ragConfig.embeddingApiKey}
+                        disabled={ragIsIndexing || (ragConfig.embeddingProvider === 'openai' && !ragConfig.embeddingApiKey)}
                         className="w-full text-xs py-1 px-2 bg-primary/10 hover:bg-primary/20 text-primary rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                       >
                         {ragIsIndexing ? "索引中..." : "重建索引"}

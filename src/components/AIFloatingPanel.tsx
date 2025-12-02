@@ -7,6 +7,7 @@ import React, { useRef, useEffect, useState } from "react";
 import { useUIStore } from "@/stores/useUIStore";
 import { useAIStore } from "@/stores/useAIStore";
 import { useFileStore } from "@/stores/useFileStore";
+import { useAgentStore } from "@/stores/useAgentStore";
 import { 
   Bot, 
   BrainCircuit, 
@@ -31,10 +32,21 @@ export function AIFloatingPanel({ ballPosition, onDock }: AIFloatingPanelProps) 
     config, 
     setConfig, 
     clearChat,
+    checkFirstLoad: checkChatFirstLoad,
   } = useAIStore();
+  const { checkFirstLoad: checkAgentFirstLoad } = useAgentStore();
   useFileStore(); // Hook for store subscription
 
   const [showSettings, setShowSettings] = useState(false);
+
+  // 首次加载检查
+  useEffect(() => {
+    if (chatMode === "agent") {
+      checkAgentFirstLoad();
+    } else {
+      checkChatFirstLoad();
+    }
+  }, [chatMode, checkAgentFirstLoad, checkChatFirstLoad]);
 
   // 计算面板位置（在悬浮球旁边）
   const getPanelPosition = () => {

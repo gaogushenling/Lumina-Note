@@ -82,10 +82,13 @@ interface AgentState {
   reject: () => void;
   clearChat: () => void;
   retry: (context: TaskContext) => Promise<void>;  // 重新生成最后一条 AI 回复
+  checkFirstLoad: () => void;
 
   // 内部更新
   _updateFromLoop: () => void;
 }
+
+let hasInitialized = false;
 
 export const useAgentStore = create<AgentState>()(
   persist(
@@ -451,6 +454,21 @@ export const useAgentStore = create<AgentState>()(
           
           // 重新发送
           await get().startTask(userContent, context);
+        },
+
+        checkFirstLoad: () => {
+          if (!hasInitialized) {
+            hasInitialized = true;
+            const { sessions, currentSessionId } = get();
+            const currentSession = sessions.find(s => s.id === currentSessionId);
+            
+            // 如果当前会话存在且有消息，则创建新会话
+            // 如果当前会话不存在，也创建新会话
+            // 如果当前会话存在但为空（messages.length === 0），则复用它（不创建新的）
+            if (!currentSession || currentSession.messages.length > 0) {
+              get().createSession();
+            }
+          }
         },
 
         // 从 Loop 更新状态

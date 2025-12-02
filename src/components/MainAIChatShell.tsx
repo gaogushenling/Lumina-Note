@@ -43,10 +43,10 @@ const WELCOME_EMOJIS = [
 
 // 快捷操作卡片数据
 const QUICK_ACTIONS = [
-  { icon: Sparkles, label: "润色文字", desc: "优化表达", mode: "chat" as const, prompt: "帮我润色这段文字：" },
-  { icon: FileText, label: "总结笔记", desc: "提炼要点", mode: "chat" as const, prompt: "帮我总结当前笔记的要点" },
-  { icon: Zap, label: "写篇文章", desc: "创建新笔记", mode: "agent" as const, prompt: "帮我写一篇关于" },
-  { icon: Bot, label: "学习笔记", desc: "整理知识点", mode: "agent" as const, prompt: "帮我创建一份关于 __ 的学习笔记" },
+  { icon: Sparkles, label: "润色文字", desc: "Chat: 优化表达", mode: "chat" as const, prompt: "帮我润色这段文字：" },
+  { icon: FileText, label: "总结笔记", desc: "Chat: 提炼要点", mode: "chat" as const, prompt: "帮我总结当前笔记的要点" },
+  { icon: Zap, label: "写篇文章", desc: "Agent: 创建新笔记", mode: "agent" as const, prompt: "帮我写一篇关于" },
+  { icon: Bot, label: "学习笔记", desc: "Agent: 整理知识点", mode: "agent" as const, prompt: "帮我创建一份关于 __ 的学习笔记" },
 ];
 
 // 建议卡片组件
@@ -109,6 +109,7 @@ export function MainAIChatShell() {
     reject,
     startTask,
     abort: agentAbort,
+    checkFirstLoad: checkAgentFirstLoad,
   } = useAgentStore();
   
   // Chat store
@@ -123,6 +124,7 @@ export function MainAIChatShell() {
     isStreaming: chatStreaming,
     sendMessageStream,
     stopStreaming,
+    checkFirstLoad: checkChatFirstLoad,
   } = useAIStore();
 
   // 根据模式获取对应的会话数据
@@ -184,6 +186,15 @@ export function MainAIChatShell() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
+
+  // 首次加载检查
+  useEffect(() => {
+    if (chatMode === "agent") {
+      checkAgentFirstLoad();
+    } else {
+      checkChatFirstLoad();
+    }
+  }, [chatMode, checkAgentFirstLoad, checkChatFirstLoad]);
 
   // 点击外部关闭文件选择器
   useEffect(() => {
@@ -768,7 +779,7 @@ export function MainAIChatShell() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="询问、搜索或创作任何内容..."
+                placeholder={chatMode === "agent" ? "我是Lumina，这个模式下我拥有许多强力装备，可以帮你处理各种事务！" : "我是Lumina，你有什么想和我聊聊的？我知无不言"}
                 className="w-full resize-none outline-none text-foreground placeholder:text-muted-foreground min-h-[40px] max-h-[200px] bg-transparent text-base leading-relaxed"
                 rows={1}
                 autoFocus
@@ -861,6 +872,7 @@ export function MainAIChatShell() {
                 <div className="flex items-center bg-muted rounded-lg p-0.5">
                   <button
                     onClick={() => setChatMode("chat")}
+                    title="简单的对话模式，无法操作文件"
                     className={`px-3 py-1 text-xs font-medium rounded-md transition-all duration-200 ${
                       chatMode === "chat"
                         ? "bg-background text-foreground shadow-sm"
@@ -874,6 +886,7 @@ export function MainAIChatShell() {
                   </button>
                   <button
                     onClick={() => setChatMode("agent")}
+                    title="智能助手模式，可以读写文件和执行任务"
                     className={`px-3 py-1 text-xs font-medium rounded-md transition-all duration-200 ${
                       chatMode === "agent"
                         ? "bg-background text-foreground shadow-sm"

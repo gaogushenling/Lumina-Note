@@ -340,6 +340,7 @@ export function RightPanel() {
     config,
     clearChat,
     setConfig,
+    checkFirstLoad: checkChatFirstLoad,
   } = useAIStore();
   useFileStore(); // Hook needed for store subscription
   const { 
@@ -350,7 +351,7 @@ export function RightPanel() {
     rebuildIndex,
     cancelIndex,
   } = useRAGStore();
-  const { autoApprove, setAutoApprove } = useAgentStore();
+  const { autoApprove, setAutoApprove, checkFirstLoad: checkAgentFirstLoad } = useAgentStore();
   
   const [showSettings, setShowSettings] = useState(false);
   const [isDraggingAI, setIsDraggingAI] = useState(false);
@@ -358,6 +359,18 @@ export function RightPanel() {
 
   const activeTab = activeTabIndex >= 0 ? tabs[activeTabIndex] : null;
   const isMainAIActive = activeTab?.type === "ai-chat";
+
+  // 首次加载检查
+  useEffect(() => {
+    // 只有当 AI 面板可见时才检查
+    if (rightPanelTab === "chat" && aiPanelMode === "docked" && !isMainAIActive) {
+      if (chatMode === "agent") {
+        checkAgentFirstLoad();
+      } else {
+        checkChatFirstLoad();
+      }
+    }
+  }, [rightPanelTab, aiPanelMode, isMainAIActive, chatMode, checkAgentFirstLoad, checkChatFirstLoad]);
 
   // 处理 AI tab 拖拽开始
   const handleAIDragStart = (e: React.MouseEvent) => {

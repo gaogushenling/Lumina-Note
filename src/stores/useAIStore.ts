@@ -127,7 +127,10 @@ interface AIState {
   stopStreaming: () => void;
   clearChat: () => void;
   retry: (currentFile?: { path: string; name: string; content: string }) => Promise<void>;  // 重新生成
+  checkFirstLoad: () => void;
 }
+
+let hasInitialized = false;
 
 export const useAIStore = create<AIState>()(
   persist(
@@ -704,6 +707,21 @@ Be concise but thorough in your responses.`;
         
         // 重新发送（使用流式）
         await get().sendMessageStream(userContent, currentFile);
+      },
+
+      checkFirstLoad: () => {
+        if (!hasInitialized) {
+          hasInitialized = true;
+          const { sessions, currentSessionId } = get();
+          const currentSession = sessions.find(s => s.id === currentSessionId);
+          
+          // 如果当前会话存在且有消息，则创建新会话
+          // 如果当前会话不存在，也创建新会话
+          // 如果当前会话存在但为空（messages.length === 0），则复用它（不创建新的）
+          if (!currentSession || currentSession.messages.length > 0) {
+            get().createSession();
+          }
+        }
       },
     }),
     {

@@ -6,6 +6,7 @@ use tauri::{AppHandle, Emitter};
 /// File system event types
 #[derive(Debug, Clone, serde::Serialize)]
 #[serde(tag = "type")]
+#[allow(dead_code)]
 pub enum FsEvent {
     Created { path: String },
     Modified { path: String },

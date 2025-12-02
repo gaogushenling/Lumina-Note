@@ -8,6 +8,7 @@ mod fs;
 mod error;
 mod vector_db;
 
+#[cfg(debug_assertions)]
 use tauri::Manager;
 
 fn main() {
@@ -48,10 +49,10 @@ fn main() {
             vector_db::check_file_needs_reindex,
             vector_db::clear_vector_index,
         ])
-        .setup(|app| {
+        .setup(|_app| {
             #[cfg(debug_assertions)]
             {
-                let window = app.get_webview_window("main").unwrap();
+                let window = _app.get_webview_window("main").unwrap();
                 window.open_devtools();
             }
             Ok(())

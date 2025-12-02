@@ -11,7 +11,7 @@ import { usePDFStructure } from "@/hooks/usePDFStructure";
 import { useAIStore } from "@/stores/useAIStore";
 import { useUIStore } from "@/stores/useUIStore";
 import { cn } from "@/lib/utils";
-import { FileText, Loader2, Sparkles, ChevronLeft } from "lucide-react";
+import { FileText, Loader2, Sparkles, ChevronLeft, ChevronRight } from "lucide-react";
 import { readFile } from "@tauri-apps/plugin-fs";
 
 interface PDFViewerProps {
@@ -209,17 +209,6 @@ export function PDFViewer({ filePath, className }: PDFViewerProps) {
           </span>
         </div>
         <div className="flex items-center gap-2">
-          {/* 显示/隐藏目录 */}
-          {!showOutline && (
-            <button
-              onClick={() => setShowOutline(true)}
-              className="flex items-center gap-1 px-2 py-1 text-xs rounded hover:bg-accent transition-colors"
-              title="显示目录"
-            >
-              <FileText size={12} />
-              <span>目录</span>
-            </button>
-          )}
           {/* 交互模式切换 */}
           <button
             onClick={() => setInteractiveMode(!interactiveMode)}
@@ -253,9 +242,9 @@ export function PDFViewer({ filePath, className }: PDFViewerProps) {
       />
 
       {/* 主内容区：目录 + PDF 渲染 */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden relative">
         {/* 左侧边栏：目录 */}
-        {showOutline && (
+        {showOutline ? (
           <div className="flex flex-col w-64 border-r border-border bg-muted/30">
             {/* 头部 */}
             <div className="flex items-center justify-between px-3 py-2 border-b border-border">
@@ -277,6 +266,14 @@ export function PDFViewer({ filePath, className }: PDFViewerProps) {
               />
             </div>
           </div>
+        ) : (
+          <button
+            onClick={() => setShowOutline(true)}
+            className="absolute left-0 top-2 z-10 flex items-center justify-center w-5 h-6 bg-muted/80 border border-border border-l-0 rounded-r shadow-sm hover:bg-background transition-colors"
+            title="展开目录"
+          >
+            <ChevronRight size={14} className="text-muted-foreground" />
+          </button>
         )}
 
         {/* PDF 渲染区域 */}

@@ -379,12 +379,29 @@ export const useAIStore = create<AIState>()(
           });
 
           console.log('[AI Debug] About to call chat()...');
+          
+          // 准备配置覆盖 (如果启用了路由且配置了聊天模型)
+          let configOverride: Partial<AIConfig> | undefined = undefined;
+          if (config.routing?.enabled && config.routing.chatProvider) {
+             configOverride = {
+               provider: config.routing.chatProvider,
+               apiKey: config.routing.chatApiKey || config.apiKey,
+               model: config.routing.chatModel,
+               customModelId: config.routing.chatCustomModelId,
+               baseUrl: config.routing.chatBaseUrl,
+             };
+             console.log('[AI] Using chat model:', configOverride.model);
+          }
+
           let response;
           try {
             // Call AI - 使用最新的 messages 状态
+            // 强制使用 "chat" 意图以启用灵感助手 Prompt
             response = await chat(
               [...get().messages],
-              filesToSend
+              filesToSend,
+              configOverride,
+              { intent: "chat" }
             );
             console.log('[AI Debug] chat() returned successfully');
           } catch (chatError) {
@@ -554,13 +571,14 @@ export const useAIStore = create<AIState>()(
           }
 
           // Build messages with context
-          const basePrompt = `You are a helpful AI assistant for note-taking. 
-You help users with writing, editing, and organizing their notes.
-Always respond in the same language as the user's message.
-Be concise but thorough in your responses.`;
+          const basePrompt = `你是一个灵感与写作建议助手。
+你的主要目标是激发用户的创造力，提供写作角度、结构优化建议和内容润色方案。
+请专注于提供思路、大纲、修辞建议或具体的段落示例，而不是直接执行文件操作。
+当用户询问或卡顿时，请提供建设性的反馈、启发性的问题或相关的灵感素材。
+请始终使用与用户消息相同的语言进行回复。`;
           
           const systemMessage = filesToSend.length > 0
-            ? `${basePrompt}\n\nCurrent context files:\n\n${filesToSend.map(f => 
+            ? `${basePrompt}\n\n当前上下文文件：\n\n${filesToSend.map(f => 
                 `### ${f.name}\n\`\`\`\n${f.content}\n\`\`\``
               ).join("\n\n")}`
             : basePrompt;
@@ -577,9 +595,23 @@ Be concise but thorough in your responses.`;
             })),
           ];
 
+          // 准备配置覆盖 (如果启用了路由且配置了聊天模型)
+          let configOverride: Partial<AIConfig> | undefined = undefined;
+          if (config.routing?.enabled && config.routing.chatProvider) {
+             configOverride = {
+               provider: config.routing.chatProvider,
+               apiKey: config.routing.chatApiKey || config.apiKey,
+               model: config.routing.chatModel,
+               customModelId: config.routing.chatCustomModelId,
+               baseUrl: config.routing.chatBaseUrl,
+             };
+             console.log('[AI] Using chat model:', configOverride.model);
+          }
+
           // 使用 callLLM 而不是 callLLMStream（与 Agent 模式保持一致）
           console.log('[AI Debug] Calling callLLM with messages:', llmMessages.length);
-          const response = await callLLM(llmMessages);
+          
+          const response = await callLLM(llmMessages, undefined, configOverride);
           console.log('[AI Debug] callLLM response:', {
             contentLength: response.content?.length || 0,
             hasUsage: !!response.usage,

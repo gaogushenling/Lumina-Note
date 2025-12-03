@@ -15,7 +15,8 @@ import {
   AgentEventHandler,
   AgentEventType,
   LLMResponse,
-  RAGSearchResult
+  RAGSearchResult,
+  LLMConfig
 } from "../types";
 import { StateManager } from "./StateManager";
 import { parseResponse, formatToolResult, getNoToolUsedPrompt } from "./MessageParser";
@@ -51,7 +52,7 @@ export class AgentLoop {
   /**
    * 启动 Agent 任务
    */
-  async startTask(userMessage: string, context: TaskContext): Promise<void> {
+  async startTask(userMessage: string, context: TaskContext, configOverride?: Partial<LLMConfig>): Promise<void> {
     // 保存现有消息（不重置）
     const existingMessages = this.stateManager.getMessages();
     const hasHistory = existingMessages.length > 1; // 除了 system 消息外还有其他消息
@@ -60,6 +61,7 @@ export class AgentLoop {
     this.stateManager.setStatus("running");
     this.stateManager.setTask(userMessage);
     this.stateManager.resetErrors();
+    this.stateManager.setLLMConfig(configOverride);
     this.abortController = new AbortController();
 
     // RAG 自动注入：搜索相关笔记
@@ -181,6 +183,56 @@ export class AgentLoop {
           break;
         } else {
           // 没有工具调用也没有完成标记
+
+          // 检查是否是纯文本回复（可能是闲聊）
+          // 移除 thinking 标签后，如果剩余内容不包含类似工具调用的标签，则视为普通回复
+          const cleanContent = response.content.replace(/<thinking>[\s\S]*?<\/thinking>/g, "").trim();
+          
+          // 移除代码块，避免误判代码中的标签
+          const contentWithoutCode = cleanContent.replace(/```[\s\S]*?```/g, "");
+          
+          // 检查是否有潜在的工具标签（简单的启发式：包含下划线的标签通常是工具，如 <read_note>）
+          // 如果 parseResponse 没解析出来，但这里匹配到了，说明可能是格式错误的工具调用
+          const hasPotentialToolTag = /<[a-z]+(_[a-z]+)+/i.test(contentWithoutCode);
+
+          // 只有在非严格模式下（如 chat/writer/researcher），或者看起来像是提问时，才允许纯文本结束
+          // 对于 editor/organizer，我们期望它至少调用 ask_user 或 attempt_completion
+          const currentMode = context.mode?.slug;
+          const intent = context.intent;
+          
+          // 如果意图明确是 chat，则允许纯文本回复
+          if (intent === "chat") {
+            this.stateManager.setStatus("completed");
+            break;
+          }
+
+          // 否则，如果是操作模式，则强制要求使用工具
+          const isActionOrientedMode = currentMode === "editor" || currentMode === "organizer";
+          // 检查是否是明确的操作意图 (create/edit/organize)
+          const isExplicitActionIntent = intent === "create" || intent === "edit" || intent === "organize";
+
+          if (!hasPotentialToolTag && cleanContent.length > 0) {
+            if (isActionOrientedMode || isExplicitActionIntent) {
+              // 在操作模式或操作意图下，如果回复很短（可能是简单的确认或拒绝），或者包含问号（可能是提问），则允许通过
+              // 否则，强制要求使用工具，防止 Agent 幻觉（说做了但没做）
+              const isShortReply = cleanContent.length < 50;
+              const isQuestion = cleanContent.includes("?") || cleanContent.includes("？");
+              
+              // 只有当意图不是明确的操作意图时，才允许简短回复通过
+              // 如果意图明确是 create/edit/organize，即使回复很短，也必须使用工具（除非是提问）
+              
+              if ((isShortReply || isQuestion) && (!isExplicitActionIntent || isQuestion)) {
+                this.stateManager.setStatus("completed");
+                break;
+              }
+              // 否则，继续执行下面的错误处理，强制要求使用工具
+            } else {
+              // 非操作模式（Writer/Researcher），允许纯文本回复
+              this.stateManager.setStatus("completed");
+              break;
+            }
+          }
+
           this.stateManager.incrementErrors();
           
           if (this.stateManager.getConsecutiveErrors() >= MAX_CONSECUTIVE_ERRORS) {
@@ -209,9 +261,10 @@ export class AgentLoop {
    * 调用 LLM
    */
   private async callLLM(messages: Message[]): Promise<LLMResponse> {
+    const configOverride = this.stateManager.getLLMConfig();
     return callLLM(messages, {
       signal: this.abortController?.signal,
-    });
+    }, configOverride);
   }
 
   /**
@@ -250,7 +303,7 @@ export class AgentLoop {
       
       // 如果执行失败，追加反思提示
       if (!result.success) {
-        resultMsg += `\n\n❌ 系统拒绝执行：检测到工具调用错误。\n\n请立即反思：\n1. 工具名称是否正确？\n2. 参数格式是否符合 JSON 规范？\n3. 参数值是否有效？\n\n请在下一次回复中：\n1. 使用 <thinking> 标签分析错误原因\n2. 修正错误并重新调用`;
+        resultMsg += `\n\n❌ 系统拒绝执行：检测到工具调用错误。\n\n请立即反思：\n1. 工具名称是否正确？\n2. 参数格式是否符合 JSON 规范？\n3. 参数值是否有效？(特别是文件路径是否包含特殊字符或格式错误)\n\n请在下一次回复中：\n1. 必须使用 <thinking> 标签详细分析错误原因\n2. 修正错误并重新调用工具`;
       }
 
       this.stateManager.addMessage({

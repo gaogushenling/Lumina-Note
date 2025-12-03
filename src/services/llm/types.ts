@@ -39,15 +39,52 @@ export interface ModelMeta {
   supportsThinking?: boolean;
 }
 
+// ============ 意图识别 ============
+
+export type IntentType = "chat" | "search" | "edit" | "create" | "organize" | "complex";
+
+export interface Intent {
+  type: IntentType;
+  confidence: number;
+  reasoning: string;
+}
+
+// ============ 路由配置 ============
+
+export interface RoutingConfig {
+  enabled: boolean;
+  
+  // 意图识别模型 (用于分析用户意图)
+  intentProvider?: LLMProviderType;
+  intentApiKey?: string;
+  intentModel?: string;
+  intentCustomModelId?: string;
+  intentBaseUrl?: string;
+
+  // 聊天/轻量级模型 (用于 Chat 模式和简单意图)
+  chatProvider?: LLMProviderType;
+  chatApiKey?: string;
+  chatModel?: string;
+  chatCustomModelId?: string;
+  chatBaseUrl?: string;
+
+  // 路由规则：哪些意图路由到聊天模型
+  // 例如: ["chat", "search"] -> 这些意图使用 chatModel，其他使用主模型
+  targetIntents: IntentType[];
+}
+
 // ============ LLM 配置 ============
 
 export interface LLMConfig {
   provider: LLMProviderType;
   apiKey: string;
   model: string;
-  customModelId?: string;  // 当 model === "custom" 时使用的实际模型 ID
+  customModelId?: string;
   baseUrl?: string;
   temperature?: number;
+  
+  // 路由配置
+  routing?: RoutingConfig;
 }
 
 // ============ LLM 调用参数 ============

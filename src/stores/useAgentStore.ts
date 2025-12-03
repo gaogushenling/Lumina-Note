@@ -9,10 +9,13 @@ import {
   Message, 
   ToolCall, 
   AgentModeSlug,
-  TaskContext 
+  TaskContext,
+  LLMConfig
 } from "@/agent/types";
 import { getAgentLoop, resetAgentLoop } from "@/agent/core/AgentLoop";
 import { MODES } from "@/agent/modes";
+import { getAIConfig } from "@/lib/ai";
+import { intentRouter, Intent } from "@/services/llm";
 
 interface AgentSession {
   id: string;
@@ -23,6 +26,7 @@ interface AgentSession {
   status: AgentStatus;
   currentTask: string | null;
   lastError: string | null;
+  lastIntent: Intent | null;
 }
 
 function generateAgentSessionTitleFromMessages(messages: Message[], fallback: string = "新对话"): string {
@@ -58,6 +62,7 @@ interface AgentState {
   pendingTool: ToolCall | null;
   currentTask: string | null;
   lastError: string | null;
+  lastIntent: Intent | null;
 
   // 会话
   sessions: AgentSession[];
@@ -150,6 +155,7 @@ export const useAgentStore = create<AgentState>()(
         pendingTool: null,
         currentTask: null,
         lastError: null,
+        lastIntent: null,
 
         // 会话列表
         sessions: [
@@ -162,6 +168,7 @@ export const useAgentStore = create<AgentState>()(
             status: "idle",
             currentTask: null,
             lastError: null,
+            lastIntent: null,
           },
         ],
         currentSessionId: defaultSessionId,
@@ -192,6 +199,7 @@ export const useAgentStore = create<AgentState>()(
             status: "idle",
             currentTask: null,
             lastError: null,
+            lastIntent: null,
           };
 
           set((state) => ({
@@ -202,6 +210,7 @@ export const useAgentStore = create<AgentState>()(
             pendingTool: null,
             currentTask: null,
             lastError: null,
+            lastIntent: null,
           }));
         },
 
@@ -224,6 +233,7 @@ export const useAgentStore = create<AgentState>()(
               pendingTool: null,
               currentTask: current?.currentTask ?? null,
               lastError: current?.lastError ?? null,
+              lastIntent: current?.lastIntent ?? null,
             };
           });
         },
@@ -252,6 +262,7 @@ export const useAgentStore = create<AgentState>()(
               pendingTool: null,
               currentTask: session.currentTask,
               lastError: session.lastError,
+              lastIntent: session.lastIntent,
             };
           });
         },
@@ -322,15 +333,80 @@ export const useAgentStore = create<AgentState>()(
           await new Promise(resolve => setTimeout(resolve, 150));
           set((state) => ({
             status: "running",
+            lastIntent: null, // 重置意图状态，确保显示的是本次任务的结果
             sessions: state.sessions.map((s) =>
               s.id === state.currentSessionId
-                ? { ...s, status: "running", updatedAt: Date.now() }
+                ? { ...s, status: "running", updatedAt: Date.now(), lastIntent: null }
                 : s
             ),
           }));
 
+          // 意图识别与动态路由
+          let configOverride: Partial<LLMConfig> | undefined = undefined;
           try {
-            await loop.startTask(message, fullContext);
+            const config = getAIConfig();
+            // 检查路由是否启用 (只要启用了路由，就进行意图识别，即使没有配置 chatProvider)
+            if (config.routing?.enabled) {
+              // 获取最新消息历史
+              const currentMessages = get().messages;
+              
+              const intent = await intentRouter.route(message, currentMessages);
+              console.log('[Agent] Intent detected:', intent);
+
+              // 更新意图状态
+              set((state) => ({
+                lastIntent: intent,
+                sessions: state.sessions.map((s) =>
+                  s.id === state.currentSessionId
+                    ? { ...s, lastIntent: intent }
+                    : s
+                ),
+              }));
+
+              // 将意图添加到上下文，供 AgentLoop 判断是否允许纯文本回复
+              fullContext.intent = intent.type;
+
+              // 规则匹配：如果意图是 chat 或 search，且配置了 chatProvider，则使用 chatModel
+              if (["chat", "search"].includes(intent.type) && config.routing.chatProvider) {
+                 configOverride = {
+                   provider: config.routing.chatProvider,
+                   apiKey: config.routing.chatApiKey || config.apiKey,
+                   model: config.routing.chatModel,
+                   customModelId: config.routing.chatCustomModelId,
+                   baseUrl: config.routing.chatBaseUrl,
+                 };
+                 console.log('[Agent] Routing to chat model:', configOverride.model);
+              }
+
+              // 意图驱动的模式切换：根据意图自动切换到最合适的 Agent 模式
+              // 这解决了 "edit" 意图被识别但因当前模式缺少工具而无法执行的问题
+              let targetMode: AgentModeSlug | null = null;
+              switch (intent.type) {
+                case "create":
+                  targetMode = "writer";
+                  break;
+                case "edit":
+                  targetMode = "editor";
+                  break;
+                case "organize":
+                  targetMode = "organizer";
+                  break;
+                case "search":
+                  targetMode = "researcher";
+                  break;
+              }
+
+              if (targetMode && MODES[targetMode]) {
+                fullContext.mode = MODES[targetMode];
+                console.log(`[Agent] Auto-switching mode to: ${targetMode} (based on intent: ${intent.type})`);
+              }
+            }
+          } catch (e) {
+            console.warn('[Agent] Routing failed:', e);
+          }
+
+          try {
+            await loop.startTask(message, fullContext, configOverride);
           } catch (error) {
             const errMsg = error instanceof Error ? error.message : "未知错误";
             set((state) => ({
@@ -392,6 +468,7 @@ export const useAgentStore = create<AgentState>()(
             pendingTool: null,
             currentTask: null,
             lastError: null,
+            lastIntent: null,
             sessions: state.sessions.map((s) =>
               s.id === state.currentSessionId
                 ? {
@@ -400,6 +477,7 @@ export const useAgentStore = create<AgentState>()(
                     messages: [],
                     currentTask: null,
                     lastError: null,
+                    lastIntent: null,
                     updatedAt: Date.now(),
                   }
                 : s

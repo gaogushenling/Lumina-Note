@@ -11,6 +11,7 @@ import {
   getLLMConfig,
   type Message,
   type LLMConfig,
+  type IntentType,
 } from "@/services/llm";
 
 // 重新导出 Message 类型以保持兼容
@@ -58,7 +59,22 @@ export function parseFileReferences(message: string): string[] {
 }
 
 // Build system prompt for file editing
-function buildSystemPrompt(files: FileReference[]): string {
+function buildSystemPrompt(files: FileReference[], intent?: IntentType): string {
+  // 如果是闲聊意图，使用极简 Prompt
+  if (intent === "chat") {
+    let prompt = `你是一个灵感与写作建议助手。
+你的目标是激发用户的创造力，提供写作角度、结构建议和内容改进方案。
+请不要直接修改文件，而是提供思路、大纲或具体的段落建议供用户参考。`;
+    if (files.length > 0) {
+      prompt += "\n\n上下文文件：\n";
+      for (const file of files) {
+        prompt += `\n=== ${file.name} ===\n${file.content || "(空)"}\n`;
+      }
+    }
+    return prompt;
+  }
+
+  // 其他意图（如 edit, organize, complex）使用完整 Prompt
   let prompt = `你是一个智能笔记助手，专门帮助用户编辑和改进 Markdown 笔记。
 
 你的能力：
@@ -140,14 +156,17 @@ export interface ChatResponse {
  */
 export async function chat(
   messages: Message[],
-  files: FileReference[] = []
+  files: FileReference[] = [],
+  configOverride?: Partial<LLMConfig>,
+  options?: { intent?: IntentType }
 ): Promise<ChatResponse> {
   console.log('[AI Debug] chat() called', {
     messagesCount: messages.length,
     filesCount: files.length,
+    intent: options?.intent
   });
 
-  const systemPrompt = buildSystemPrompt(files);
+  const systemPrompt = buildSystemPrompt(files, options?.intent);
   
   // 构建完整消息列表
   const fullMessages: Message[] = [
@@ -159,7 +178,7 @@ export async function chat(
 
   try {
     // 使用统一的 LLM 服务
-    const response = await callLLM(fullMessages);
+    const response = await callLLM(fullMessages, undefined, configOverride);
 
     console.log('[AI Debug] callLLM response:', {
       contentLength: response.content?.length || 0,

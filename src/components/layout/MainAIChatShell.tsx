@@ -115,6 +115,7 @@ export function MainAIChatShell() {
     startTask,
     abort: agentAbort,
     checkFirstLoad: checkAgentFirstLoad,
+    lastIntent,
   } = useAgentStore();
   
   // Chat store
@@ -1054,6 +1055,53 @@ export function MainAIChatShell() {
               </div>
             </div>
             <div className="flex-1 overflow-auto p-4 font-mono text-xs space-y-4">
+              {/* 意图识别调试信息 */}
+              <div className="p-3 rounded-lg border bg-muted/30 border-border mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="font-bold text-muted-foreground flex items-center gap-2">
+                    <span>🔍 意图识别结果</span>
+                    {lastIntent && (
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] ${
+                        lastIntent.confidence > 0.8 ? 'bg-green-500/20 text-green-600' : 'bg-amber-500/20 text-amber-600'
+                      }`}>
+                        {(lastIntent.confidence * 100).toFixed(0)}%
+                      </span>
+                    )}
+                  </div>
+                  {!lastIntent && (
+                    <span className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded">
+                      未触发
+                    </span>
+                  )}
+                </div>
+                
+                {lastIntent ? (
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      <span className="text-muted-foreground w-16 shrink-0">Type:</span>
+                      <span className="font-bold text-foreground bg-background px-1 rounded border border-border/50">
+                        {lastIntent.type}
+                      </span>
+                    </div>
+                    <div className="flex gap-2">
+                      <span className="text-muted-foreground w-16 shrink-0">Reason:</span>
+                      <span className="text-foreground/80 italic break-words">
+                        {lastIntent.reasoning}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-muted-foreground italic opacity-70">
+                    暂无意图数据。可能原因：
+                    <ul className="list-disc list-inside mt-1 space-y-0.5">
+                      <li>尚未发送消息</li>
+                      <li>未在设置中启用"动态路由" (Routing)</li>
+                      <li>路由配置不完整</li>
+                    </ul>
+                  </div>
+                )}
+              </div>
+
               {fullMessages.map((msg, idx) => (
                 <div
                   key={idx}

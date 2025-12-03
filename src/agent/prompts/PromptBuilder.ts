@@ -39,7 +39,7 @@ ${this.getToolUseSection()}
 
 ${this.getRulesSection(context)}
 
-${this.getObjectiveSection()}`;
+${this.getObjectiveSection(mode)}`;
   }
 
   /**
@@ -149,7 +149,7 @@ CAPABILITIES
   }
 
   private getRulesSection(context: TaskContext): string {
-    return `====
+    let baseRules = `====
 
 RULES
 
@@ -175,6 +175,18 @@ RULES
   - 仅用于创建不存在的文件
   
 - **禁止**：用 create_note 覆盖已存在的文件（会丢失未修改的内容）`;
+
+    // 针对 Writer 模式的特殊规则
+    if (context.mode?.slug === "writer") {
+      baseRules += `
+
+# 写作助手特别规则
+- 当用户要求创作内容（如文章、计划、报告）时，**必须**使用 create_note 将内容保存为文件，而不是直接输出在对话中。
+- 除非用户明确要求"只在对话框中显示"或"不保存"。
+- 创建文件后，使用 attempt_completion 告知用户文件已创建。`;
+    }
+
+    return baseRules;
   }
 
   private getContextSection(context: TaskContext): string {
@@ -210,10 +222,13 @@ ${context.ragResults.map((r, i) => `${i + 1}. ${r.filePath} (${(r.score * 100).t
     return section;
   }
 
-  private getObjectiveSection(): string {
+  private getObjectiveSection(mode: AgentMode): string {
     return `====
 
 OBJECTIVE
+
+你现在的身份是：${mode.name}
+你的核心职责：${mode.roleDefinition}
 
 根据用户的请求完成任务。
 

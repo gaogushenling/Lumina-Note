@@ -31,6 +31,7 @@ export interface AgentState {
   pendingTool: ToolCall | null;
   consecutiveErrors: number;
   lastError: string | null;
+  llmConfig?: Partial<LLMConfig>;
 }
 
 // ============ 工具系统 ============
@@ -90,6 +91,7 @@ export interface TaskContext {
   fileTree?: string;
   recentNotes?: string[];
   mode?: AgentMode;
+  intent?: string; // 当前任务的意图类型
   ragResults?: RAGSearchResult[];  // RAG 自动注入的搜索结果
   displayMessage?: string;  // 用于前端显示的消息（不含文件完整内容）
 }

@@ -15,24 +15,26 @@ export const CreateNoteTool: ToolExecutor = {
     params: Record<string, unknown>,
     context: ToolContext
   ): Promise<ToolResult> {
-    const path = params.path as string;
+    let path = params.path;
     const content = params.content as string;
 
-    if (!path) {
+    // 兼容数组格式 (LLM 有时会输出 ["path"])
+    if (Array.isArray(path)) {
+      path = path[0];
+      console.log("[CreateNoteTool] 参数兼容: path[] → path");
+    }
+
+    if (!path || typeof path !== "string") {
       return {
         success: false,
         content: "",
-        error: `参数错误: 缺少 path 参数。
+        error: `参数错误: path 必须是字符串。
 
 正确用法:
 <create_note>
 <path>笔记路径.md</path>
-<content># 笔记标题
-
-笔记内容...</content>
-</create_note>
-
-注意: create_note 用于创建新文件。如果要修改现有文件，请使用 edit_note。`,
+<content>...</content>
+</create_note>`,
       };
     }
 

@@ -51,7 +51,7 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
           {/* AI Provider Settings */}
           <div className="space-y-2">
             <div className="text-xs font-medium text-foreground flex items-center gap-2">
-              <span>🤖 对话模型</span>
+              <span>🤖 主模型 (Main Model)</span>
             </div>
             <div>
               <label className="text-xs text-muted-foreground block mb-1">服务商</label>
@@ -115,7 +115,6 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
                     {model.name} {model.supportsThinking ? "🧠" : ""}
                   </option>
                 ))}
-                <option value="custom">自定义模型...</option>
               </select>
             </div>
 
@@ -132,18 +131,20 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
               </div>
             )}
 
-            <div>
-              <label className="text-xs text-muted-foreground block mb-1">
-                Base URL <span className="text-muted-foreground">(可选，用于第三方代理)</span>
-              </label>
-              <input
-                type="text"
-                value={config.baseUrl || ""}
-                onChange={(e) => setConfig({ baseUrl: e.target.value || undefined })}
-                placeholder={PROVIDER_REGISTRY[config.provider as LLMProviderType]?.defaultBaseUrl}
-                className="w-full text-xs p-2 rounded border border-border bg-background"
-              />
-            </div>
+            {config.model === "custom" && (
+              <div>
+                <label className="text-xs text-muted-foreground block mb-1">
+                  Base URL <span className="text-muted-foreground">(可选，用于第三方代理)</span>
+                </label>
+                <input
+                  type="text"
+                  value={config.baseUrl || ""}
+                  onChange={(e) => setConfig({ baseUrl: e.target.value || undefined })}
+                  placeholder={PROVIDER_REGISTRY[config.provider as LLMProviderType]?.defaultBaseUrl}
+                  className="w-full text-xs p-2 rounded border border-border bg-background"
+                />
+              </div>
+            )}
 
             <div>
               <div className="flex items-center justify-between mb-1">
@@ -160,6 +161,327 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
                 className="w-full accent-primary h-1 bg-muted rounded-lg appearance-none cursor-pointer"
               />
             </div>
+          </div>
+
+          {/* 动态路由设置 */}
+          <div className="space-y-2 pt-3 border-t border-border">
+            <div className="flex items-center justify-between text-xs font-medium text-foreground">
+              <span className="flex items-center gap-1">
+                <span className="text-lg">⚡</span>
+                动态路由 (Intent Routing)
+              </span>
+              <label className="flex items-center gap-1 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={config.routing?.enabled || false}
+                  onChange={(e) => {
+                    const currentRouting = config.routing || {
+                      enabled: false,
+                      targetIntents: ["chat", "search"] as any,
+                    };
+                    // 强制设置 targetIntents 为 chat 和 search
+                    setConfig({ 
+                      routing: { 
+                        ...currentRouting, 
+                        enabled: e.target.checked,
+                        targetIntents: ["chat", "search"]
+                      } 
+                    });
+                  }}
+                  className="w-3 h-3"
+                />
+                <span className="text-xs text-muted-foreground">启用</span>
+              </label>
+            </div>
+
+            {config.routing?.enabled && (
+              <div className="space-y-4 pl-2 border-l-2 border-muted ml-1">
+                <div className="text-xs text-muted-foreground">
+                  配置意图识别模型和路由规则。
+                </div>
+
+                {/* 1. 意图识别模型配置 */}
+                <div className="space-y-2">
+                  <div className="text-xs font-medium text-foreground">🧠 意图识别模型 (Intent Model)</div>
+                  <div className="text-[10px] text-muted-foreground mb-1">用于分析用户意图 (Chat/Search/Edit/...)</div>
+                  
+                  <div>
+                    <label className="text-xs text-muted-foreground block mb-1">服务商</label>
+                    <select
+                      value={config.routing.intentProvider || config.provider}
+                      onChange={(e) => {
+                        const provider = e.target.value as LLMProviderType;
+                        const providerMeta = PROVIDER_REGISTRY[provider];
+                        const defaultModel = providerMeta?.models[0]?.id || "";
+                        const currentRouting = config.routing!;
+                        setConfig({ 
+                          routing: { 
+                            ...currentRouting, 
+                            intentProvider: provider,
+                            intentModel: defaultModel
+                          } 
+                        });
+                      }}
+                      className="w-full text-xs p-2 rounded border border-border bg-background"
+                    >
+                      {Object.entries(PROVIDER_REGISTRY).map(([key, meta]) => (
+                        <option key={key} value={key}>
+                          {meta.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-xs text-muted-foreground block mb-1">
+                      API Key <span className="text-muted-foreground">(留空则使用主 Key)</span>
+                    </label>
+                    <input
+                      type="password"
+                      value={config.routing.intentApiKey || ""}
+                      onChange={(e) => {
+                        const currentRouting = config.routing!;
+                        setConfig({ 
+                          routing: { ...currentRouting, intentApiKey: e.target.value } 
+                        });
+                      }}
+                      placeholder="sk-..."
+                      className="w-full text-xs p-2 rounded border border-border bg-background"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs text-muted-foreground block mb-1">模型</label>
+                    <select
+                      value={
+                        PROVIDER_REGISTRY[(config.routing.intentProvider || config.provider) as LLMProviderType]?.models.some(m => m.id === config.routing?.intentModel)
+                          ? config.routing.intentModel
+                          : "custom"
+                      }
+                      onChange={(e) => {
+                        const newModel = e.target.value;
+                        const currentRouting = config.routing!;
+                        if (newModel === "custom") {
+                          setConfig({ 
+                            routing: { ...currentRouting, intentModel: "custom", intentCustomModelId: "" } 
+                          });
+                        } else {
+                          setConfig({ 
+                            routing: { ...currentRouting, intentModel: newModel } 
+                          });
+                        }
+                      }}
+                      className="w-full text-xs p-2 rounded border border-border bg-background"
+                    >
+                      {PROVIDER_REGISTRY[(config.routing.intentProvider || config.provider) as LLMProviderType]?.models.map((model) => (
+                        <option key={model.id} value={model.id}>
+                          {model.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {config.routing.intentModel === "custom" && (
+                    <div>
+                      <label className="text-xs text-muted-foreground block mb-1">自定义模型 ID</label>
+                      <input
+                        type="text"
+                        value={config.routing.intentCustomModelId || ""}
+                        onChange={(e) => {
+                          const currentRouting = config.routing!;
+                          setConfig({ 
+                            routing: { ...currentRouting, intentCustomModelId: e.target.value } 
+                          });
+                        }}
+                        placeholder="例如：deepseek-ai/DeepSeek-V3"
+                        className="w-full text-xs p-2 rounded border border-border bg-background"
+                      />
+                    </div>
+                  )}
+
+                  {config.routing.intentModel === "custom" && (
+                    <div>
+                      <label className="text-xs text-muted-foreground block mb-1">
+                        Base URL <span className="text-muted-foreground">(可选)</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={config.routing.intentBaseUrl || ""}
+                        onChange={(e) => {
+                          const currentRouting = config.routing!;
+                          setConfig({ 
+                            routing: { ...currentRouting, intentBaseUrl: e.target.value } 
+                          });
+                        }}
+                        placeholder={PROVIDER_REGISTRY[(config.routing.intentProvider || config.provider) as LLMProviderType]?.defaultBaseUrl}
+                        className="w-full text-xs p-2 rounded border border-border bg-background"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* 2. 聊天模型配置 */}
+                <div className="space-y-2 pt-2 border-t border-border/50">
+                  <div className="text-xs font-medium text-foreground">💬 聊天模型 (Chat Model)</div>
+                  <div className="text-[10px] text-muted-foreground mb-1">用于 Chat 模式和简单任务 (如闲聊、搜索)</div>
+                  
+                  <div>
+                    <label className="text-xs text-muted-foreground block mb-1">服务商</label>
+                    <select
+                      value={config.routing.chatProvider || ""}
+                      onChange={(e) => {
+                        const provider = e.target.value;
+                        const currentRouting = config.routing!;
+                        
+                        if (!provider) {
+                          setConfig({ 
+                            routing: { 
+                              ...currentRouting, 
+                              chatProvider: undefined,
+                              chatApiKey: undefined,
+                              chatModel: undefined,
+                              chatCustomModelId: undefined,
+                              chatBaseUrl: undefined
+                            } 
+                          });
+                          return;
+                        }
+
+                        const providerMeta = PROVIDER_REGISTRY[provider as LLMProviderType];
+                        const defaultModel = providerMeta?.models[0]?.id || "";
+                        
+                        setConfig({ 
+                          routing: { 
+                            ...currentRouting, 
+                            chatProvider: provider as LLMProviderType,
+                            chatModel: defaultModel
+                          } 
+                        });
+                      }}
+                      className="w-full text-xs p-2 rounded border border-border bg-background"
+                    >
+                      <option value="">🔄 跟随主模型 (默认)</option>
+                      {Object.entries(PROVIDER_REGISTRY).map(([key, meta]) => (
+                        <option key={key} value={key}>
+                          {meta.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {!config.routing.chatProvider ? (
+                    <div className="p-2 bg-muted/50 rounded border border-border/50 text-[10px] text-muted-foreground">
+                      <span className="text-amber-500 mr-1">⚠️</span>
+                      未配置专用聊天模型，将使用主模型处理所有任务。建议配置轻量级模型（如 GPT-4o-mini, Gemini Flash）以降低成本并提高速度。
+                    </div>
+                  ) : (
+                    <>
+                      <div>
+                        <label className="text-xs text-muted-foreground block mb-1">
+                          API Key <span className="text-muted-foreground">(留空则使用主 Key)</span>
+                        </label>
+                        <input
+                          type="password"
+                          value={config.routing.chatApiKey || ""}
+                          onChange={(e) => {
+                            const currentRouting = config.routing!;
+                            setConfig({ 
+                              routing: { ...currentRouting, chatApiKey: e.target.value } 
+                            });
+                          }}
+                          placeholder="sk-..."
+                          className="w-full text-xs p-2 rounded border border-border bg-background"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-xs text-muted-foreground block mb-1">模型</label>
+                        <select
+                          value={
+                            PROVIDER_REGISTRY[config.routing.chatProvider as LLMProviderType]?.models.some(m => m.id === config.routing?.chatModel)
+                              ? config.routing.chatModel
+                              : "custom"
+                          }
+                          onChange={(e) => {
+                            const newModel = e.target.value;
+                            const currentRouting = config.routing!;
+                            if (newModel === "custom") {
+                              setConfig({ 
+                                routing: { ...currentRouting, chatModel: "custom", chatCustomModelId: "" } 
+                              });
+                            } else {
+                              setConfig({ 
+                                routing: { ...currentRouting, chatModel: newModel } 
+                              });
+                            }
+                          }}
+                          className="w-full text-xs p-2 rounded border border-border bg-background"
+                        >
+                          {PROVIDER_REGISTRY[config.routing.chatProvider as LLMProviderType]?.models.map((model) => (
+                            <option key={model.id} value={model.id}>
+                              {model.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {config.routing.chatModel === "custom" && (
+                        <div>
+                          <label className="text-xs text-muted-foreground block mb-1">自定义模型 ID</label>
+                          <input
+                            type="text"
+                            value={config.routing.chatCustomModelId || ""}
+                            onChange={(e) => {
+                              const currentRouting = config.routing!;
+                              setConfig({ 
+                                routing: { ...currentRouting, chatCustomModelId: e.target.value } 
+                              });
+                            }}
+                            placeholder="例如：deepseek-ai/DeepSeek-V3"
+                            className="w-full text-xs p-2 rounded border border-border bg-background"
+                          />
+                        </div>
+                      )}
+
+                      {config.routing.chatModel === "custom" && (
+                        <div>
+                          <label className="text-xs text-muted-foreground block mb-1">
+                            Base URL <span className="text-muted-foreground">(可选)</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={config.routing.chatBaseUrl || ""}
+                            onChange={(e) => {
+                              const currentRouting = config.routing!;
+                              setConfig({ 
+                                routing: { ...currentRouting, chatBaseUrl: e.target.value } 
+                              });
+                            }}
+                            placeholder={PROVIDER_REGISTRY[config.routing.chatProvider as LLMProviderType]?.defaultBaseUrl}
+                            className="w-full text-xs p-2 rounded border border-border bg-background"
+                          />
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+
+                {/* 3. 路由规则说明 */}
+                <div className="space-y-2 pt-2 border-t border-border/50">
+                  <div className="text-xs font-medium text-foreground">📋 路由规则</div>
+                  <div className="text-[10px] text-muted-foreground">
+                    系统将自动使用"聊天模型"处理以下任务，以节省成本并提高速度：
+                    <ul className="list-disc list-inside mt-1 space-y-0.5 text-muted-foreground/80">
+                      <li>💬 闲聊 (Chat) - 日常对话、灵感启发</li>
+                      <li>🔍 搜索 (Search) - 知识检索、信息查询</li>
+                    </ul>
+                    <div className="mt-1 text-[10px] opacity-70">
+                      * 其他复杂任务（如编辑、整理、写作）将始终使用"主模型"以保证质量。
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Agent 设置 */}

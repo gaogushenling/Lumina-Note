@@ -15,6 +15,8 @@ export type {
   ModelMeta,
   StreamChunk,
   LLMStream,
+  IntentType,
+  Intent,
 } from "./types";
 
 // Provider 注册表
@@ -37,87 +39,26 @@ export {
 
 // ============ 统一调用接口 ============
 
-import type { Message, LLMOptions, LLMResponse, LLMProvider, LLMStream } from "./types";
+import type { Message, LLMOptions, LLMResponse, LLMProvider, LLMStream, LLMConfig } from "./types";
 import { getLLMConfig } from "./config";
-import { 
-  AnthropicProvider, 
-  OpenAIProvider,
-  GeminiProvider,
-  MoonshotProvider,
-  DeepSeekProvider,
-  GroqProvider,
-  OpenRouterProvider,
-  OllamaProvider,
-} from "./providers";
+import { createProvider } from "./factory";
 
-/**
- * 根据当前配置创建 Provider 实例
- */
-export function createProvider(): LLMProvider {
-  const rawConfig = getLLMConfig();
-
-  console.log('[AI Debug] createProvider() called', {
-    provider: rawConfig.provider,
-    model: rawConfig.model,
-    hasApiKey: !!rawConfig.apiKey,
-    apiKeyLength: rawConfig.apiKey?.length || 0,
-    baseUrl: rawConfig.baseUrl,
-  });
-
-  // Ollama 不需要 API Key
-  if (!rawConfig.apiKey && rawConfig.provider !== "ollama") {
-    console.error('[AI Debug] No API key found for', rawConfig.provider);
-    throw new Error("请先配置 API Key");
-  }
-
-  // 处理自定义模型：当 model === "custom" 时使用 customModelId
-  const config = {
-    ...rawConfig,
-    model: rawConfig.model === "custom" && rawConfig.customModelId 
-      ? rawConfig.customModelId 
-      : rawConfig.model,
-  };
-
-  console.log('[AI Debug] Final config:', {
-    provider: config.provider,
-    model: config.model,
-    baseUrl: config.baseUrl,
-  });
-
-  switch (config.provider) {
-    case "anthropic":
-      return new AnthropicProvider(config);
-    case "openai":
-      return new OpenAIProvider(config);
-    case "gemini":
-      return new GeminiProvider(config);
-    case "moonshot":
-      return new MoonshotProvider(config);
-    case "deepseek":
-      return new DeepSeekProvider(config);
-    case "groq":
-      return new GroqProvider(config);
-    case "openrouter":
-      return new OpenRouterProvider(config);
-    case "ollama":
-      return new OllamaProvider(config);
-    default:
-      console.error('[AI Debug] Unsupported provider:', config.provider);
-      throw new Error(`不支持的 AI 提供商: ${config.provider}`);
-  }
-}
+// 导出 Router
+export { IntentRouter, intentRouter } from "./router";
+export { createProvider } from "./factory";
 
 /**
  * 调用 LLM (统一入口)
  */
 export async function callLLM(
   messages: Message[],
-  options?: LLMOptions
+  options?: LLMOptions,
+  configOverride?: Partial<LLMConfig>
 ): Promise<LLMResponse> {
   console.log('[AI Debug] callLLM() called with', messages.length, 'messages');
   
   try {
-    const provider = createProvider();
+    const provider = createProvider(configOverride);
     const config = getLLMConfig();
     const finalOptions = {
       ...options,
@@ -139,9 +80,10 @@ export async function callLLM(
  */
 export async function* callLLMStream(
   messages: Message[],
-  options?: LLMOptions
+  options?: LLMOptions,
+  configOverride?: Partial<LLMConfig>
 ): LLMStream {
-  const provider = createProvider();
+  const provider = createProvider(configOverride);
   const config = getLLMConfig();
   const finalOptions = {
     ...options,

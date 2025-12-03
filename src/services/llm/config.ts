@@ -10,6 +10,10 @@ const DEFAULT_CONFIG: LLMConfig = {
   apiKey: "",
   model: "moonshot-v1-8k",
   temperature: 0.3,
+  routing: {
+    enabled: false,
+    targetIntents: ["chat"], // 默认规则
+  },
 };
 
 let config: LLMConfig = { ...DEFAULT_CONFIG };

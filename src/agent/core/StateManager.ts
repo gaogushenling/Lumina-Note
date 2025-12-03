@@ -2,7 +2,7 @@
  * Agent 状态管理器
  */
 
-import { AgentState, AgentStatus, Message, ToolCall, AgentEvent, AgentEventHandler, AgentEventType } from "../types";
+import { AgentState, AgentStatus, Message, ToolCall, AgentEvent, AgentEventHandler, AgentEventType, LLMConfig } from "../types";
 
 export class StateManager {
   private state: AgentState;
@@ -20,6 +20,7 @@ export class StateManager {
       pendingTool: null,
       consecutiveErrors: 0,
       lastError: null,
+      llmConfig: undefined,
     };
   }
 
@@ -41,6 +42,10 @@ export class StateManager {
     return this.state.pendingTool;
   }
 
+  getLLMConfig(): Partial<LLMConfig> | undefined {
+    return this.state.llmConfig;
+  }
+
   // ============ 状态更新 ============
 
   setStatus(status: AgentStatus): void {
@@ -54,6 +59,10 @@ export class StateManager {
 
   setTask(task: string | null): void {
     this.state.currentTask = task;
+  }
+
+  setLLMConfig(config?: Partial<LLMConfig>): void {
+    this.state.llmConfig = config;
   }
 
   addMessage(message: Message): void {

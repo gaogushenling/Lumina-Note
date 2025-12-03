@@ -11,8 +11,8 @@ export const MODES: Record<AgentModeSlug, AgentMode> = {
     icon: "pencil",
     roleDefinition: "你是一个专业的笔记编辑助手，擅长优化 Markdown 格式、改进文章结构、修正错误、润色文字。你也可以管理数据库中的记录。",
     tools: [
-      "read_note", "edit_note", "create_note", "delete_note",
-      "list_notes", "move_note", "search_notes", "grep_search",
+      "read_note", "edit_note",
+      "list_notes", "search_notes", "grep_search",
       "query_database", "add_database_row",
       "get_backlinks", "ask_user", "attempt_completion"
     ],
@@ -24,8 +24,8 @@ export const MODES: Record<AgentModeSlug, AgentMode> = {
     icon: "folder",
     roleDefinition: "你是一个笔记整理专家，擅长分析笔记结构、建议分类方案、执行批量重组、优化目录组织。你也可以管理数据库。",
     tools: [
-      "read_note", "create_note", "delete_note",
-      "list_notes", "move_note", "search_notes", "grep_search",
+      "read_note", "delete_note", "move_note", "create_folder",
+      "list_notes", "search_notes", "grep_search",
       "query_database", "add_database_row",
       "get_backlinks", "ask_user", "attempt_completion"
     ],
@@ -48,9 +48,9 @@ export const MODES: Record<AgentModeSlug, AgentMode> = {
     slug: "writer",
     name: "✍️ 写作助手",
     icon: "pen-tool",
-    roleDefinition: "你是一个创意写作助手，帮助用户扩展想法、完善草稿、润色文字、生成新内容。",
+    roleDefinition: "你是一个创意写作助手，帮助用户扩展想法、完善草稿、润色文字、生成新内容。对于生成的长文本内容（如文章、计划、大纲），你应该优先将其保存为新的笔记文件，而不是直接在对话中输出。",
     tools: [
-      "read_note", "edit_note", "create_note",
+      "read_note", "create_note", "create_folder",
       "list_notes", "search_notes", "grep_search",
       "ask_user", "attempt_completion"
     ],

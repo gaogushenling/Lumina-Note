@@ -99,16 +99,16 @@ export function Ribbon() {
   };
 
   return (
-    <div className="w-12 h-full bg-muted/30 border-r border-border flex flex-col items-center py-2 gap-1">
+    <div className="w-10 h-full bg-muted/30 border-r border-border flex flex-col items-center py-2 gap-0.5">
       {/* Top icons */}
-      <div className="flex flex-col items-center gap-1">
+      <div className="flex flex-col items-center gap-0.5">
         {/* Search */}
         <button
           onClick={() => window.dispatchEvent(new CustomEvent("open-global-search"))}
-          className="w-9 h-9 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+          className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
           title="全局搜索 (Ctrl+Shift+F)"
         >
-          <Search size={20} />
+          <Search size={18} />
         </button>
 
         {/* AI Chat - Main View */}
@@ -118,42 +118,42 @@ export function Ribbon() {
             setRightPanelTab("outline");
           }}
           className={cn(
-            "w-9 h-9 rounded-lg flex items-center justify-center transition-all",
+            "w-8 h-8 rounded-lg flex items-center justify-center transition-all",
             activeSection === "ai"
               ? "bg-primary/10 text-primary"
               : "text-muted-foreground hover:text-foreground hover:bg-muted"
           )}
           title="AI 聊天（主视图）"
         >
-          <Bot size={20} />
+          <Bot size={18} />
         </button>
 
         {/* Files/Editor */}
         <button
           onClick={handleSwitchToFiles}
           className={cn(
-            "w-9 h-9 rounded-lg flex items-center justify-center transition-all",
+            "w-8 h-8 rounded-lg flex items-center justify-center transition-all",
             activeSection === "file"
               ? "bg-primary/10 text-primary"
               : "text-muted-foreground hover:text-foreground hover:bg-muted"
           )}
           title="文件编辑器"
         >
-          <FileText size={20} />
+          <FileText size={18} />
         </button>
 
         {/* Graph */}
         <button
           onClick={openGraphTab}
           className={cn(
-            "w-9 h-9 rounded-lg flex items-center justify-center transition-all",
+            "w-8 h-8 rounded-lg flex items-center justify-center transition-all",
             activeSection === "graph"
               ? "bg-primary/10 text-primary"
               : "text-muted-foreground hover:text-foreground hover:bg-muted"
           )}
           title="关系图谱"
         >
-          <Network size={20} />
+          <Network size={18} />
         </button>
 
         {/* Video Note */}
@@ -167,28 +167,28 @@ export function Ribbon() {
             }
           }}
           className={cn(
-            "w-9 h-9 rounded-lg flex items-center justify-center transition-all",
+            "w-8 h-8 rounded-lg flex items-center justify-center transition-all",
             activeSection === "video"
               ? "bg-primary/10 text-primary"
               : "text-muted-foreground hover:text-foreground hover:bg-muted"
           )}
           title="视频笔记"
         >
-          <Video size={20} />
+          <Video size={18} />
         </button>
 
         {/* Database */}
         <button
           onClick={() => window.dispatchEvent(new CustomEvent("open-create-database"))}
           className={cn(
-            "w-9 h-9 rounded-lg flex items-center justify-center transition-all",
+            "w-8 h-8 rounded-lg flex items-center justify-center transition-all",
             activeSection === "database"
               ? "bg-primary/10 text-primary"
               : "text-muted-foreground hover:text-foreground hover:bg-muted"
           )}
           title="数据库"
         >
-          <Database size={20} />
+          <Database size={18} />
         </button>
 
         {/* Browser */}
@@ -203,14 +203,14 @@ export function Ribbon() {
             }
           }}
           className={cn(
-            "w-9 h-9 rounded-lg flex items-center justify-center transition-all",
+            "w-8 h-8 rounded-lg flex items-center justify-center transition-all",
             activeSection === "browser"
               ? "bg-primary/10 text-primary"
               : "text-muted-foreground hover:text-foreground hover:bg-muted"
           )}
           title="浏览器"
         >
-          <Globe size={20} />
+          <Globe size={18} />
         </button>
       </div>
 
@@ -218,23 +218,23 @@ export function Ribbon() {
       <div className="flex-1" />
 
       {/* Bottom icons */}
-      <div className="flex flex-col items-center gap-1">
+      <div className="flex flex-col items-center gap-0.5">
         {/* Theme toggle */}
         <button
           onClick={toggleTheme}
-          className="w-9 h-9 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+          className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
           title={isDarkMode ? "切换到亮色模式" : "切换到暗色模式"}
         >
-          {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+          {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
         </button>
 
         {/* Settings */}
         <button
           onClick={() => setShowSettings(true)}
-          className="w-9 h-9 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+          className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
           title="设置"
         >
-          <Settings size={20} />
+          <Settings size={18} />
         </button>
       </div>
 

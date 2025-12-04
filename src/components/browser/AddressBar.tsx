@@ -137,64 +137,64 @@ export function AddressBar({
 
   return (
     <div className={cn(
-      "flex items-center gap-2 px-3 py-2 bg-muted/50 border-b border-border",
+      "flex items-center gap-1.5 px-2 py-1 bg-muted/50 border-b border-border",
       className
     )}>
       {/* 导航按钮 */}
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-0.5">
         <button
           onClick={onBack}
           disabled={!canGoBack}
           className={cn(
-            "p-1.5 rounded-md transition-colors",
+            "p-1 rounded-md transition-colors",
             canGoBack 
               ? "hover:bg-accent text-foreground" 
               : "text-muted-foreground cursor-not-allowed"
           )}
           title="后退"
         >
-          <ArrowLeft size={16} />
+          <ArrowLeft size={14} />
         </button>
         
         <button
           onClick={onForward}
           disabled={!canGoForward}
           className={cn(
-            "p-1.5 rounded-md transition-colors",
+            "p-1 rounded-md transition-colors",
             canGoForward 
               ? "hover:bg-accent text-foreground" 
               : "text-muted-foreground cursor-not-allowed"
           )}
           title="前进"
         >
-          <ArrowRight size={16} />
+          <ArrowRight size={14} />
         </button>
         
         <button
           onClick={onRefresh}
           className={cn(
-            "p-1.5 rounded-md hover:bg-accent transition-colors",
+            "p-1 rounded-md hover:bg-accent transition-colors",
             isLoading && "animate-spin"
           )}
           title="刷新"
         >
-          <RotateCw size={16} />
+          <RotateCw size={14} />
         </button>
         
         {onHome && (
           <button
             onClick={onHome}
-            className="p-1.5 rounded-md hover:bg-accent transition-colors"
+            className="p-1 rounded-md hover:bg-accent transition-colors"
             title="主页"
           >
-            <Home size={16} />
+            <Home size={14} />
           </button>
         )}
       </div>
       
       {/* 地址栏输入框 */}
       <div className={cn(
-        "flex-1 flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-colors",
+        "flex-1 flex items-center gap-1.5 px-2 py-1 rounded-md border transition-colors",
         isFocused 
           ? "bg-background border-primary ring-1 ring-primary" 
           : "bg-background/60 border-border hover:bg-background"
@@ -202,9 +202,9 @@ export function AddressBar({
         {/* 安全指示器 */}
         {url && (
           urlInfo.isSecure ? (
-            <Lock size={14} className="text-green-500 shrink-0" />
+            <Lock size={12} className="text-green-500 shrink-0" />
           ) : (
-            <Globe size={14} className="text-muted-foreground shrink-0" />
+            <Globe size={12} className="text-muted-foreground shrink-0" />
           )
         )}
         
@@ -221,16 +221,16 @@ export function AddressBar({
           }}
           onBlur={() => setIsFocused(false)}
           placeholder="搜索或输入网址"
-          className="flex-1 bg-transparent outline-none text-sm"
+          className="flex-1 bg-transparent outline-none text-xs"
         />
         
         {/* 搜索按钮 */}
         <button
           onClick={handleNavigate}
-          className="p-1 rounded hover:bg-accent transition-colors"
+          className="p-0.5 rounded hover:bg-accent transition-colors"
           title="前往"
         >
-          <Search size={14} className="text-muted-foreground" />
+          <Search size={12} className="text-muted-foreground" />
         </button>
       </div>
     </div>

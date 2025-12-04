@@ -38,6 +38,8 @@ interface BrowserState {
   instances: Map<string, WebViewInstance>;
   // 当前激活的标签页 ID
   activeTabId: string | null;
+  // 全局隐藏状态（用于模态框打开时）
+  globalHidden: boolean;
   
   // Actions
   registerWebView: (tabId: string, url: string, title?: string) => void;
@@ -51,6 +53,10 @@ interface BrowserState {
   unfreezeTab: (tabId: string) => Promise<void>;
   discardTab: (tabId: string) => Promise<void>;
   restoreTab: (tabId: string) => Promise<void>;
+  
+  // 全局隐藏/显示（用于模态框）
+  hideAllWebViews: () => Promise<void>;
+  showAllWebViews: () => Promise<void>;
   
   // 获取状态
   getTabState: (tabId: string) => TabState | null;
@@ -68,6 +74,7 @@ let lifecycleTimer: ReturnType<typeof setInterval> | null = null;
 export const useBrowserStore = create<BrowserState>((set, get) => ({
   instances: new Map(),
   activeTabId: null,
+  globalHidden: false,
   
   // 注册新的 WebView
   registerWebView: (tabId: string, url: string, title?: string) => {
@@ -316,5 +323,47 @@ export const useBrowserStore = create<BrowserState>((set, get) => ({
       lifecycleTimer = null;
       console.log('[BrowserStore] 生命周期管理器已停止');
     }
+  },
+  
+  // 隐藏所有 WebView（用于模态框打开时）
+  hideAllWebViews: async () => {
+    const { instances, globalHidden } = get();
+    if (globalHidden) return; // 已经隐藏了
+    
+    set({ globalHidden: true });
+    
+    for (const [tabId, instance] of instances) {
+      if (instance.webviewExists) {
+        try {
+          await invoke('set_browser_webview_visible', { tabId, visible: false });
+        } catch (err) {
+          console.error('[BrowserStore] 隐藏 WebView 失败:', tabId, err);
+        }
+      }
+    }
+    console.log('[BrowserStore] 已隐藏所有 WebView');
+  },
+  
+  // 显示所有 WebView（用于模态框关闭时）
+  showAllWebViews: async () => {
+    const { instances, activeTabId, globalHidden } = get();
+    if (!globalHidden) return; // 没有被隐藏
+    
+    set({ globalHidden: false });
+    
+    // 只显示当前激活的 WebView
+    if (activeTabId) {
+      // 优先从 instances 检查，但即使不在 instances 中也尝试显示
+      const instance = instances.get(activeTabId);
+      if (!instance || instance.webviewExists) {
+        try {
+          await invoke('set_browser_webview_visible', { tabId: activeTabId, visible: true });
+        } catch (err) {
+          // WebView 可能不存在，忽略错误
+          console.log('[BrowserStore] 显示 WebView 失败（可能不存在）:', activeTabId);
+        }
+      }
+    }
+    console.log('[BrowserStore] 已恢复 WebView 显示');
   },
 }));

@@ -1,6 +1,8 @@
+import { useEffect } from "react";
 import { useAIStore } from "@/stores/useAIStore";
 import { useAgentStore } from "@/stores/useAgentStore";
 import { useRAGStore } from "@/stores/useRAGStore";
+import { useBrowserStore } from "@/stores/useBrowserStore";
 import { PROVIDER_REGISTRY, type LLMProviderType } from "@/services/llm";
 import { Settings, Tag, Loader2 } from "lucide-react";
 
@@ -21,6 +23,16 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
     cancelIndex,
     lastError: ragError,
   } = useRAGStore();
+  const { hideAllWebViews, showAllWebViews } = useBrowserStore();
+
+  // 弹窗打开时隐藏 WebView，关闭时恢复
+  useEffect(() => {
+    if (isOpen) {
+      hideAllWebViews();
+    } else {
+      showAllWebViews();
+    }
+  }, [isOpen, hideAllWebViews, showAllWebViews]);
 
   if (!isOpen) return null;
 

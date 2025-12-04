@@ -4,8 +4,10 @@
  * 带有 iOS 18 风格液态玻璃 + 雨滴效果
  */
 
+import { useEffect } from "react";
 import { useUIStore } from "@/stores/useUIStore";
 import { useAIStore } from "@/stores/useAIStore";
+import { useBrowserStore } from "@/stores/useBrowserStore";
 import { OFFICIAL_THEMES } from "@/lib/themes";
 import { X, Check } from "lucide-react";
 import { LiquidGlassEffect } from "../effects/LiquidGlassEffect";
@@ -18,6 +20,16 @@ interface SettingsModalProps {
 export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const { themeId, setThemeId, editorMode, setEditorMode } = useUIStore();
   const { config } = useAIStore();
+  const { hideAllWebViews, showAllWebViews } = useBrowserStore();
+
+  // 弹窗打开时隐藏 WebView，关闭时恢复
+  useEffect(() => {
+    if (isOpen) {
+      hideAllWebViews();
+    } else {
+      showAllWebViews();
+    }
+  }, [isOpen, hideAllWebViews, showAllWebViews]);
 
   if (!isOpen) return null;
 

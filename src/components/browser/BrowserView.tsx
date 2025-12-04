@@ -45,6 +45,8 @@ export function BrowserView({
     updateUrl,
     updateTitle,
     startLifecycleManager,
+    setActiveTab,
+    globalHidden,
   } = useBrowserStore();
   
   // 状态 - 使用 tabId 作为 key 来跟踪当前标签页的状态
@@ -63,6 +65,13 @@ export function BrowserView({
   useEffect(() => {
     startLifecycleManager();
   }, [startLifecycleManager]);
+
+  // 当标签页激活时，更新 store 中的 activeTabId
+  useEffect(() => {
+    if (isActive) {
+      setActiveTab(tabId);
+    }
+  }, [tabId, isActive, setActiveTab]);
 
   // 当 isActive 变化时，显示/隐藏 WebView
   useEffect(() => {
@@ -252,7 +261,18 @@ export function BrowserView({
     }
   }, [tabId, webviewCreated]);
 
-  
+  // 当 globalHidden 从 true 变为 false 时，更新 WebView 位置
+  // 这是为了解决模态框关闭后 WebView 位置错乱的问题
+  const prevGlobalHiddenRef = useRef(globalHidden);
+  useEffect(() => {
+    if (prevGlobalHiddenRef.current && !globalHidden && isActive && webviewCreated) {
+      // globalHidden 从 true 变为 false，需要更新位置
+      console.log('[Browser] 模态框关闭，更新 WebView 位置:', tabId);
+      updateWebviewBounds();
+    }
+    prevGlobalHiddenRef.current = globalHidden;
+  }, [globalHidden, isActive, webviewCreated, tabId, updateWebviewBounds]);
+
   // 导航到新 URL
   const handleNavigate = useCallback(async (url: string) => {
     if (!url) return;
@@ -378,20 +398,20 @@ export function BrowserView({
       />
       
       {/* 工具栏 - 快捷网址 */}
-      <div className="flex items-center gap-1 px-3 py-1.5 border-b border-border bg-muted/30 overflow-x-auto scrollbar-none">
+      <div className="flex items-center gap-1 px-2 py-0.5 border-b border-border bg-muted/30 overflow-x-auto scrollbar-none">
         <button
-          className="p-1.5 rounded hover:bg-accent transition-colors text-muted-foreground hover:text-foreground shrink-0"
+          className="p-1 rounded hover:bg-accent transition-colors text-muted-foreground hover:text-foreground shrink-0"
           title="添加书签"
         >
-          <Bookmark size={14} />
+          <Bookmark size={12} />
         </button>
         <button
-          className="p-1.5 rounded hover:bg-accent transition-colors text-muted-foreground hover:text-foreground shrink-0"
+          className="p-1 rounded hover:bg-accent transition-colors text-muted-foreground hover:text-foreground shrink-0"
           title="分享"
         >
-          <Share2 size={14} />
+          <Share2 size={12} />
         </button>
-        <div className="w-px h-4 bg-border mx-1 shrink-0" />
+        <div className="w-px h-3 bg-border mx-0.5 shrink-0" />
         {/* 快捷网址 */}
         {[
           { name: 'Google', url: 'https://www.google.com', icon: '🔍' },
@@ -413,7 +433,7 @@ export function BrowserView({
               const { openWebpageTab } = useFileStore.getState();
               openWebpageTab(site.url, site.name);
             }}
-            className="flex items-center gap-1 px-2 py-1 rounded hover:bg-accent text-xs text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap shrink-0"
+            className="flex items-center gap-0.5 px-1.5 py-0.5 rounded hover:bg-accent text-[11px] text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap shrink-0"
             title={site.url}
           >
             <span>{site.icon}</span>

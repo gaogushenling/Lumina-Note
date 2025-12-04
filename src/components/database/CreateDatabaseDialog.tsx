@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useDatabaseStore } from "@/stores/useDatabaseStore";
 import { useFileStore } from "@/stores/useFileStore";
+import { useBrowserStore } from "@/stores/useBrowserStore";
 import type { CreateDatabaseOptions } from "@/types/database";
 import { Database, ListTodo, FolderKanban, Book, X } from "lucide-react";
 
@@ -19,10 +20,20 @@ const templates = [
 export function CreateDatabaseDialog({ isOpen, onClose }: CreateDatabaseDialogProps) {
   const { createDatabase } = useDatabaseStore();
   const { openDatabaseTab, refreshFileTree } = useFileStore();
+  const { hideAllWebViews, showAllWebViews } = useBrowserStore();
   
   const [name, setName] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState<CreateDatabaseOptions['template']>('blank');
   const [isCreating, setIsCreating] = useState(false);
+  
+  // 弹窗打开时隐藏 WebView，关闭时恢复
+  useEffect(() => {
+    if (isOpen) {
+      hideAllWebViews();
+    } else {
+      showAllWebViews();
+    }
+  }, [isOpen, hideAllWebViews, showAllWebViews]);
   
   if (!isOpen) return null;
   

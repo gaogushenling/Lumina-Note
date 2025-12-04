@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useFileStore } from "@/stores/useFileStore";
+import { useBrowserStore } from "@/stores/useBrowserStore";
 import { FileEntry, readFile } from "@/lib/tauri";
 import { cn, getFileName } from "@/lib/utils";
 import { Search, X, FileText, Loader2, Replace, ChevronDown, ChevronRight } from "lucide-react";
@@ -34,6 +35,16 @@ export function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   
   const { fileTree, openFile } = useFileStore();
+  const { hideAllWebViews, showAllWebViews } = useBrowserStore();
+
+  // 弹窗打开时隐藏 WebView，关闭时恢复
+  useEffect(() => {
+    if (isOpen) {
+      hideAllWebViews();
+    } else {
+      showAllWebViews();
+    }
+  }, [isOpen, hideAllWebViews, showAllWebViews]);
 
   // Focus input when opened
   useEffect(() => {

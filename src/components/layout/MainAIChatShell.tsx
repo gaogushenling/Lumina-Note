@@ -217,9 +217,48 @@ export function MainAIChatShell() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // 检测输入是否仅仅是一个网页链接
+  const isOnlyWebLink = useCallback((text: string): string | null => {
+    const trimmed = text.trim();
+    if (!trimmed) return null;
+    
+    // 检查是否包含空格（多个单词则不是链接）
+    if (trimmed.includes(' ')) return null;
+    
+    let url = trimmed;
+    
+    // 情况1: 已经是完整的 URL (http:// 或 https://)
+    if (/^https?:\/\//.test(url)) {
+      return url;
+    }
+    
+    // 情况2: www. 开头
+    if (/^www\./.test(url)) {
+      return 'https://' + url;
+    }
+    
+    // 情况3: 域名格式 (例如 baidu.com, google.com, example.co.uk)
+    // 支持带路径的 URL (例如 baidu.com/search?q=test)
+    if (/^[a-zA-Z0-9][a-zA-Z0-9-]*(\.[a-zA-Z0-9-]+)+/.test(url)) {
+      return 'https://' + url;
+    }
+    
+    return null;
+  }, []);
+
   // 发送消息
   const handleSend = useCallback(async () => {
     if ((!input.trim() && referencedFiles.length === 0) || isLoading) return;
+
+    // 检查是否仅仅是一个网页链接
+    const webLink = isOnlyWebLink(input);
+    if (webLink && referencedFiles.length === 0) {
+      // 直接打开网页链接
+      const { openWebpageTab } = useFileStore.getState();
+      openWebpageTab(webLink);
+      setInput("");
+      return;
+    }
 
     const message = input;
     setInput("");
@@ -243,7 +282,7 @@ export function MainAIChatShell() {
       } : undefined;
       await sendMessageStream(fullMessage, currentFileInfo, displayMessage);
     }
-  }, [input, chatMode, isLoading, vaultPath, currentFile, currentContent, referencedFiles, startTask, sendMessageStream]);
+  }, [input, chatMode, isLoading, vaultPath, currentFile, currentContent, referencedFiles, startTask, sendMessageStream, isOnlyWebLink]);
 
   // 键盘事件
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {

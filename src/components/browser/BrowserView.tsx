@@ -31,7 +31,7 @@ interface BrowserViewProps {
 }
 
 // 默认首页
-const DEFAULT_HOME_URL = 'https://www.bing.com';
+const DEFAULT_HOME_URL = 'https://www.google.com';
 
 export function BrowserView({
   tabId,
@@ -64,7 +64,32 @@ export function BrowserView({
     startLifecycleManager();
   }, [startLifecycleManager]);
 
-  
+  // 当 isActive 变化时，显示/隐藏 WebView
+  useEffect(() => {
+    if (!webviewCreated) return;
+    
+    const updateVisibility = async () => {
+      try {
+        await invoke('set_browser_webview_visible', { tabId, visible: isActive });
+        console.log('[Browser] WebView 可见性更新:', tabId, isActive);
+      } catch (err) {
+        console.error('[Browser] 更新 WebView 可见性失败:', err);
+      }
+    };
+    
+    updateVisibility();
+  }, [tabId, isActive, webviewCreated]);
+
+  // 组件卸载时隐藏 WebView
+  useEffect(() => {
+    return () => {
+      // 组件卸载时隐藏当前 WebView
+      invoke('set_browser_webview_visible', { tabId, visible: false }).catch(err => {
+        console.error('[Browser] 卸载时隐藏 WebView 失败:', err);
+      });
+    };
+  }, [tabId]);
+
   // 当 tabId 变化时，处理标签页切换
   useEffect(() => {
     const handleTabSwitch = async () => {
@@ -177,6 +202,18 @@ export function BrowserView({
       // 注册到 store
       registerWebView(tabId, url);
       
+      // 创建后立即更新尺寸，确保显示正确
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        await invoke('update_browser_webview_bounds', {
+          tabId,
+          x: rect.left,
+          y: rect.top,
+          width: rect.width,
+          height: rect.height,
+        });
+      }
+      
       // 更新标签页信息
       try {
         const urlObj = new URL(url);
@@ -226,6 +263,8 @@ export function BrowserView({
     try {
       if (webviewCreated) {
         await invoke('navigate_browser_webview', { tabId, url });
+        // 导航后更新 WebView 尺寸，确保显示正确
+        await updateWebviewBounds();
       } else {
         await createWebview(url);
       }
@@ -247,7 +286,7 @@ export function BrowserView({
     } finally {
       setIsLoading(false);
     }
-  }, [tabId, webviewCreated, createWebview, updateUrl, updateWebpageTab, updateTitle, onTitleChange]);
+  }, [tabId, webviewCreated, createWebview, updateUrl, updateWebpageTab, updateTitle, onTitleChange, updateWebviewBounds]);
   
   // 后退
   const handleBack = useCallback(async () => {
@@ -338,22 +377,51 @@ export function BrowserView({
         isLoading={isLoading}
       />
       
-      {/* 工具栏 */}
-      <div className="flex items-center gap-2 px-3 py-1.5 border-b border-border bg-muted/30">
+      {/* 工具栏 - 快捷网址 */}
+      <div className="flex items-center gap-1 px-3 py-1.5 border-b border-border bg-muted/30 overflow-x-auto scrollbar-none">
         <button
-          className="p-1.5 rounded hover:bg-accent transition-colors text-muted-foreground hover:text-foreground"
+          className="p-1.5 rounded hover:bg-accent transition-colors text-muted-foreground hover:text-foreground shrink-0"
           title="添加书签"
         >
           <Bookmark size={14} />
         </button>
         <button
-          className="p-1.5 rounded hover:bg-accent transition-colors text-muted-foreground hover:text-foreground"
+          className="p-1.5 rounded hover:bg-accent transition-colors text-muted-foreground hover:text-foreground shrink-0"
           title="分享"
         >
           <Share2 size={14} />
         </button>
+        <div className="w-px h-4 bg-border mx-1 shrink-0" />
+        {/* 快捷网址 */}
+        {[
+          { name: 'Google', url: 'https://www.google.com', icon: '🔍' },
+          { name: 'ChatGPT', url: 'https://chatgpt.com', icon: '💬' },
+          { name: 'Gemini', url: 'https://gemini.google.com', icon: '✨' },
+          { name: 'Kimi', url: 'https://kimi.moonshot.cn', icon: '🌙' },
+          { name: 'DeepSeek', url: 'https://chat.deepseek.com', icon: '🔍' },
+          { name: 'arXiv', url: 'https://arxiv.org', icon: '📄' },
+          { name: 'Cool Paper', url: 'https://papers.cool/', icon: '📚' },
+          { name: 'YouTube', url: 'https://www.youtube.com', icon: '▶️' },
+          { name: 'BiliBili', url: 'https://www.bilibili.com', icon: '📺' },
+          { name: 'LeetCode', url: 'https://leetcode.com', icon: '💻' },
+          { name: 'Wikipedia', url: 'https://www.wikipedia.org', icon: '📖' },
+          { name: 'MDN', url: 'https://developer.mozilla.org', icon: '🔧' },
+        ].map(site => (
+          <button
+            key={site.url}
+            onClick={() => {
+              const { openWebpageTab } = useFileStore.getState();
+              openWebpageTab(site.url, site.name);
+            }}
+            className="flex items-center gap-1 px-2 py-1 rounded hover:bg-accent text-xs text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap shrink-0"
+            title={site.url}
+          >
+            <span>{site.icon}</span>
+            <span>{site.name}</span>
+          </button>
+        ))}
         <div className="flex-1" />
-        <span className="text-xs text-muted-foreground">
+        <span className="text-xs text-muted-foreground shrink-0">
           {isLoading ? '加载中...' : ''}
         </span>
       </div>
@@ -391,24 +459,33 @@ export function BrowserView({
               </p>
               
               {/* 快捷入口 */}
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-4 gap-2">
                 {[
-                  { name: '必应', url: 'https://www.bing.com', color: 'bg-blue-500' },
-                  { name: 'Wikipedia', url: 'https://www.wikipedia.org', color: 'bg-orange-500' },
-                  { name: 'MDN', url: 'https://developer.mozilla.org', color: 'bg-black' },
+                  { name: 'Google', url: 'https://www.google.com', color: 'bg-blue-500', icon: '🔍' },
+                  { name: 'ChatGPT', url: 'https://chatgpt.com', color: 'bg-green-600', icon: '💬' },
+                  { name: 'Gemini', url: 'https://gemini.google.com', color: 'bg-blue-600', icon: '✨' },
+                  { name: 'Kimi', url: 'https://kimi.moonshot.cn', color: 'bg-purple-600', icon: '🌙' },
+                  { name: 'DeepSeek', url: 'https://chat.deepseek.com', color: 'bg-orange-600', icon: '🔍' },
+                  { name: 'arXiv', url: 'https://arxiv.org', color: 'bg-red-600', icon: '📄' },
+                  { name: 'Cool Paper', url: 'https://papers.cool/', color: 'bg-indigo-600', icon: '📚' },
+                  { name: 'YouTube', url: 'https://www.youtube.com', color: 'bg-red-500', icon: '▶️' },
+                  { name: 'BiliBili', url: 'https://www.bilibili.com', color: 'bg-pink-500', icon: '📺' },
+                  { name: 'LeetCode', url: 'https://leetcode.com', color: 'bg-yellow-600', icon: '💻' },
+                  { name: 'Wikipedia', url: 'https://www.wikipedia.org', color: 'bg-orange-500', icon: '📖' },
+                  { name: 'MDN', url: 'https://developer.mozilla.org', color: 'bg-black', icon: '🔧' },
                 ].map(site => (
                   <button
                     key={site.url}
                     onClick={() => handleNavigate(site.url)}
-                    className="p-3 rounded-lg border border-border hover:bg-accent transition-colors"
+                    className="p-2 rounded-lg border border-border hover:bg-accent transition-colors"
                   >
                     <div className={cn(
-                      "w-10 h-10 rounded-full mx-auto mb-2 flex items-center justify-center text-white",
+                      "w-8 h-8 rounded-full mx-auto mb-1 flex items-center justify-center text-lg",
                       site.color
                     )}>
-                      <Globe size={20} />
+                      {site.icon}
                     </div>
-                    <span className="text-sm">{site.name}</span>
+                    <span className="text-xs">{site.name}</span>
                   </button>
                 ))}
               </div>

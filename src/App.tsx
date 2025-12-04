@@ -451,7 +451,6 @@ function App() {
           <div className="flex-1 flex flex-col overflow-hidden bg-background">
             <TabBar />
             <BrowserView
-              key={activeTab.id}
               tabId={activeTab.id}
               initialUrl={activeTab.webpageUrl}
               isActive={true}

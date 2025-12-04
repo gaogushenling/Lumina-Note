@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { FileEntry, listDirectory, readFile, saveFile, createFile } from "@/lib/tauri";
 import { VideoNoteFile, parseVideoNoteMd } from '@/types/videoNote';
+import { invoke } from '@tauri-apps/api/core';
 
 // 历史记录条目
 interface HistoryEntry {
@@ -349,12 +350,24 @@ export const useFileStore = create<FileState>()(
     const { tabs, activeTabIndex, currentContent, isDirty, undoStack, redoStack } = get();
     if (index < 0 || index >= tabs.length) return;
     
+    const tabToClose = tabs[index];
+    
     // 如果要关闭的是当前标签页且有未保存的更改，先保存
     if (index === activeTabIndex && isDirty) {
       await get().save();
     } else if (tabs[index].isDirty) {
       // 非当前标签页但有未保存更改，也保存
       await saveFile(tabs[index].path, tabs[index].content);
+    }
+    
+    // 如果是网页标签页，关闭对应的 WebView
+    if (tabToClose.type === 'webpage') {
+      try {
+        await invoke('close_browser_webview', { tabId: tabToClose.id });
+        console.log('[FileStore] 关闭 WebView:', tabToClose.id);
+      } catch (err) {
+        console.error('[FileStore] 关闭 WebView 失败:', err);
+      }
     }
     
     const newTabs = tabs.filter((_, i) => i !== index);

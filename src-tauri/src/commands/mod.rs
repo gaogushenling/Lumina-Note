@@ -703,3 +703,97 @@ pub async fn set_browser_webview_visible(
     }
     Ok(())
 }
+
+
+/// 冻结浏览器 WebView（暂停 JS 执行，降低资源占用）
+#[tauri::command]
+pub async fn browser_webview_freeze(app: AppHandle, tab_id: String) -> Result<(), AppError> {
+    let webview_id = format!("browser-{}", tab_id);
+    if let Some(webview) = app.get_webview(&webview_id) {
+        browser_debug_log(&app, format!("browser_webview_freeze: tab_id={}", tab_id));
+        
+        // 注入 JS 暂停页面活动
+        // 1. 暂停所有定时器
+        // 2. 暂停所有动画
+        // 3. 暂停媒体播放
+        let freeze_js = r#"
+            (function() {
+                // 保存原始函数
+                if (!window.__lumina_frozen) {
+                    window.__lumina_frozen = true;
+                    window.__lumina_original_setInterval = window.setInterval;
+                    window.__lumina_original_setTimeout = window.setTimeout;
+                    window.__lumina_interval_ids = [];
+                    window.__lumina_timeout_ids = [];
+                    
+                    // 暂停所有媒体
+                    document.querySelectorAll('video, audio').forEach(el => {
+                        if (!el.paused) {
+                            el.__lumina_was_playing = true;
+                            el.pause();
+                        }
+                    });
+                    
+                    // 暂停所有动画
+                    document.getAnimations().forEach(anim => anim.pause());
+                    
+                    console.log('[Lumina] Page frozen');
+                }
+            })();
+        "#;
+        
+        webview.eval(freeze_js)
+            .map_err(|e| AppError::InvalidPath(e.to_string()))?;
+        
+        // 移到屏幕外
+        webview.set_position(Position::Logical(LogicalPosition::new(-10000.0, -10000.0)))
+            .map_err(|e| AppError::InvalidPath(e.to_string()))?;
+        
+        println!("[Browser] WebView 已冻结: {}", webview_id);
+    }
+    Ok(())
+}
+
+/// 解冻浏览器 WebView（恢复 JS 执行）
+#[tauri::command]
+pub async fn browser_webview_unfreeze(app: AppHandle, tab_id: String) -> Result<(), AppError> {
+    let webview_id = format!("browser-{}", tab_id);
+    if let Some(webview) = app.get_webview(&webview_id) {
+        browser_debug_log(&app, format!("browser_webview_unfreeze: tab_id={}", tab_id));
+        
+        // 注入 JS 恢复页面活动
+        let unfreeze_js = r#"
+            (function() {
+                if (window.__lumina_frozen) {
+                    window.__lumina_frozen = false;
+                    
+                    // 恢复媒体播放
+                    document.querySelectorAll('video, audio').forEach(el => {
+                        if (el.__lumina_was_playing) {
+                            el.play().catch(() => {});
+                            delete el.__lumina_was_playing;
+                        }
+                    });
+                    
+                    // 恢复动画
+                    document.getAnimations().forEach(anim => anim.play());
+                    
+                    console.log('[Lumina] Page unfrozen');
+                }
+            })();
+        "#;
+        
+        webview.eval(unfreeze_js)
+            .map_err(|e| AppError::InvalidPath(e.to_string()))?;
+        
+        println!("[Browser] WebView 已解冻: {}", webview_id);
+    }
+    Ok(())
+}
+
+/// 检查浏览器 WebView 是否存在
+#[tauri::command]
+pub async fn browser_webview_exists(app: AppHandle, tab_id: String) -> Result<bool, AppError> {
+    let webview_id = format!("browser-{}", tab_id);
+    Ok(app.get_webview(&webview_id).is_some())
+}

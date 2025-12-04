@@ -50,6 +50,9 @@ fn main() {
             commands::browser_webview_go_forward,
             commands::browser_webview_reload,
             commands::set_browser_webview_visible,
+            commands::browser_webview_freeze,
+            commands::browser_webview_unfreeze,
+            commands::browser_webview_exists,
             // CEF Browser commands
             cef::commands::create_cef_browser,
             cef::commands::navigate_cef,

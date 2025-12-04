@@ -7,10 +7,11 @@
  * - 最终回答：正常大字体，Markdown 渲染
  */
 
-import { useState, useMemo, useEffect, memo } from "react";
+import { useState, useMemo, memo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { parseMarkdown } from "@/lib/markdown";
 import { Message } from "@/agent/types";
+import { useTimeout } from "@/hooks/useTimeout";
 import {
   ChevronRight,
   ChevronDown,
@@ -82,11 +83,11 @@ function parseAssistantMessage(content: string, toolResults: Map<string, { resul
 
   // 4. 提取工具调用
   const nonToolTags = ["thinking", "task", "current_note", "tool_result", "tool_error", "result",
-                       "directory", "recursive", "paths", "path", "content", "edits", "search", "replace",
-                       "attempt_completion", "attempt_completion_result", "related_notes"];
+    "directory", "recursive", "paths", "path", "content", "edits", "search", "replace",
+    "attempt_completion", "attempt_completion_result", "related_notes"];
   const toolCallRegex = /<(\w+)>([\s\S]*?)<\/\1>/g;
   let match;
-  
+
   while ((match = toolCallRegex.exec(content)) !== null) {
     const tagName = match[1];
     if (!nonToolTags.includes(tagName.toLowerCase())) {
@@ -94,7 +95,7 @@ function parseAssistantMessage(content: string, toolResults: Map<string, { resul
       // 先尝试用精确 key 匹配，再回退到工具名
       const key = getToolCallKey(tagName, params);
       const resultData = toolResults.get(key) || toolResults.get(tagName);
-      
+
       toolCalls.push({
         name: tagName,
         params: formatToolParams(params),
@@ -127,23 +128,23 @@ function parseAssistantMessage(content: string, toolResults: Map<string, { resul
  */
 function formatToolParams(params: string): string {
   const parts: string[] = [];
-  
+
   const dirMatch = params.match(/<directory>([^<]*)<\/directory>/);
   if (dirMatch) parts.push(`目录: ${dirMatch[1] || "/"}`);
-  
+
   const recursiveMatch = params.match(/<recursive>([^<]*)<\/recursive>/);
   if (recursiveMatch) parts.push(`递归: ${recursiveMatch[1]}`);
-  
+
   const pathsMatch = params.match(/<paths>([^<]*)<\/paths>/);
   if (pathsMatch) parts.push(`路径: ${pathsMatch[1]}`);
-  
+
   const pathMatch = params.match(/<path>([^<]*)<\/path>/);
   if (pathMatch) parts.push(`文件: ${pathMatch[1]}`);
-  
+
   if (parts.length > 0) {
     return parts.join(" | ");
   }
-  
+
   return params.replace(/<[^>]+>/g, " ").trim().slice(0, 100);
 }
 
@@ -168,17 +169,17 @@ function getToolSummary(name: string, params: string, result?: string): string {
     // 搜索工具显示搜索关键词
     return params.slice(0, 30) + (params.length > 30 ? "..." : "");
   }
-  
+
   // 如果没有匹配到，显示参数摘要
   if (params) {
     return params.slice(0, 40) + (params.length > 40 ? "..." : "");
   }
-  
+
   // 最后回退到结果
   if (result) {
     return result.length > 50 ? result.slice(0, 50) + "..." : result;
   }
-  
+
   return "执行中...";
 }
 
@@ -207,10 +208,10 @@ function decodeHtmlEntities(str: string): string {
  */
 function collectToolResults(messages: Message[]): Map<string, { result: string; success: boolean }> {
   const toolResults = new Map<string, { result: string; success: boolean }>();
-  
+
   messages.forEach(msg => {
     const content = msg.content;
-    
+
     // 提取 tool_result：<tool_result name="xxx" params="...">结果</tool_result>
     // 或旧格式：<tool_result name="xxx">结果</tool_result>
     const resultRegex = /<tool_result name="([^"]+)"(?:\s+params="([^"]*)")?>([\s\S]*?)<\/tool_result>/g;
@@ -227,7 +228,7 @@ function collectToolResults(messages: Message[]): Map<string, { result: string; 
         toolResults.set(name, { result, success: true });
       }
     }
-    
+
     // 提取 tool_error
     const errorRegex = /<tool_error name="([^"]+)"(?:\s+params="([^"]*)")?>([\s\S]*?)<\/tool_error>/g;
     while ((match = errorRegex.exec(content)) !== null) {
@@ -241,7 +242,7 @@ function collectToolResults(messages: Message[]): Map<string, { result: string; 
       }
     }
   });
-  
+
   return toolResults;
 }
 
@@ -249,13 +250,13 @@ function collectToolResults(messages: Message[]): Map<string, { result: string; 
  * 判断 user 消息是否应该跳过（工具结果、系统提示等）
  */
 function shouldSkipUserMessage(content: string): boolean {
-  return content.includes("<tool_result") || 
-         content.includes("<tool_error") ||
-         content.includes("你的响应没有包含有效的工具调用") ||
-         content.includes("请使用 <thinking> 标签分析错误原因") ||
-         content.includes("系统错误:") ||
-         content.includes("系统拒绝执行") ||
-         content.includes("用户拒绝了工具调用");
+  return content.includes("<tool_result") ||
+    content.includes("<tool_error") ||
+    content.includes("你的响应没有包含有效的工具调用") ||
+    content.includes("请使用 <thinking> 标签分析错误原因") ||
+    content.includes("系统错误:") ||
+    content.includes("系统拒绝执行") ||
+    content.includes("用户拒绝了工具调用");
 }
 
 /**
@@ -288,16 +289,16 @@ const ProcessStepsBlock = memo(function ProcessStepsBlock({
   isCurrentRound: boolean;  // 是否是当前执行中的轮次
 }) {
   const [manualExpanded, setManualExpanded] = useState(false);
-  
+
   // 只有当前轮次运行中才自动展开，历史轮次保持折叠
   const isExpanded = isCurrentRound || manualExpanded;
-  
+
   // 生成摘要文字
   const toolNames = [...new Set(toolCalls.map(t => t.name))];
-  const summaryText = toolNames.length > 0 
+  const summaryText = toolNames.length > 0
     ? `${toolNames.slice(0, 2).join(", ")}${toolNames.length > 2 ? "..." : ""}`
     : "思考";
-  
+
   return (
     <div className="bg-muted/20 rounded-lg overflow-hidden">
       {/* 折叠头部 - 始终显示 */}
@@ -309,7 +310,7 @@ const ProcessStepsBlock = memo(function ProcessStepsBlock({
         <Wrench size={12} />
         <span>{totalSteps} 个步骤{!isExpanded && `: ${summaryText}`}</span>
       </button>
-      
+
       {/* 展开内容 */}
       {isCurrentRound ? (
         // 当前轮次运行中：直接渲染，不使用动画（避免重渲染时的抖动）
@@ -355,7 +356,7 @@ const ProcessStepsBlock = memo(function ProcessStepsBlock({
  */
 const ThinkingCollapsible = memo(function ThinkingCollapsible({ thinking }: { thinking: ThinkingBlock }) {
   const [expanded, setExpanded] = useState(false);
-  
+
   return (
     <div className="text-xs text-muted-foreground/70">
       <button
@@ -391,7 +392,7 @@ const ToolCallCollapsible = memo(function ToolCallCollapsible({ tool }: { tool: 
   const [expanded, setExpanded] = useState(false);
   const isComplete = tool.result !== undefined;
   const summary = getToolSummary(tool.name, tool.params, tool.result);
-  
+
   return (
     <div className="text-xs text-muted-foreground/70">
       <button
@@ -401,7 +402,7 @@ const ToolCallCollapsible = memo(function ToolCallCollapsible({ tool }: { tool: 
         {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
         <Wrench size={12} />
         <span className="font-medium">{tool.name}</span>
-        
+
         {/* 状态图标 */}
         {isComplete ? (
           tool.success ? (
@@ -412,11 +413,11 @@ const ToolCallCollapsible = memo(function ToolCallCollapsible({ tool }: { tool: 
         ) : (
           <Loader2 size={12} className="animate-spin" />
         )}
-        
+
         {/* 摘要 */}
         <span className="truncate flex-1 opacity-70">{summary}</span>
       </button>
-      
+
       <AnimatePresence>
         {expanded && (
           <motion.div
@@ -456,8 +457,8 @@ interface AgentMessageRendererProps {
   messages: Message[];
   isRunning: boolean;
   className?: string;
-  // 超时检测
-  taskStartTime?: number | null;
+  // 超时检测（LLM 请求级别）
+  llmRequestStartTime?: number | null;
   onRetryTimeout?: () => void;
 }
 
@@ -472,39 +473,22 @@ const TIMEOUT_THRESHOLD_MS = 2 * 60 * 1000;
  * - 该轮内所有 assistant 消息的工具调用合并显示
  * - 最后一条 assistant 消息的 finalAnswer 作为最终回答
  */
-export const AgentMessageRenderer = memo(function AgentMessageRenderer({ 
-  messages, 
-  isRunning, 
+export const AgentMessageRenderer = memo(function AgentMessageRenderer({
+  messages,
+  isRunning,
   className = "",
-  taskStartTime,
+  llmRequestStartTime,
   onRetryTimeout,
 }: AgentMessageRendererProps) {
-  // 超时检测状态
-  const [isLongRunning, setIsLongRunning] = useState(false);
-  
-  // 超时检测：每 5 秒检查一次
-  useEffect(() => {
-    if (!isRunning || !taskStartTime) {
-      setIsLongRunning(false);
-      return;
-    }
-    
-    const checkTimeout = () => {
-      const elapsed = Date.now() - taskStartTime;
-      setIsLongRunning(elapsed > TIMEOUT_THRESHOLD_MS);
-    };
-    
-    // 立即检查一次
-    checkTimeout();
-    
-    // 定时检查
-    const timer = setInterval(checkTimeout, 5000);
-    return () => clearInterval(timer);
-  }, [isRunning, taskStartTime]);
-  
+  // 使用可复用的超时检测 hook
+  const { isTimeout: isLongRunning } = useTimeout(llmRequestStartTime ?? null, {
+    threshold: TIMEOUT_THRESHOLD_MS,
+    enabled: isRunning,
+  });
+
   // 收集所有工具结果
   const toolResults = useMemo(() => collectToolResults(messages), [messages]);
-  
+
   // 按轮次分组计算数据（只计算数据，不创建 JSX）
   const rounds = useMemo(() => {
     const result: Array<{
@@ -516,7 +500,7 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
       roundKey: string;
       hasAIContent: boolean;
     }> = [];
-    
+
     // 找到所有用户消息的索引
     const userMessageIndices: number[] = [];
     messages.forEach((msg, idx) => {
@@ -524,22 +508,22 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
         userMessageIndices.push(idx);
       }
     });
-    
+
     userMessageIndices.forEach((userIdx, roundIndex) => {
       const userMsg = messages[userIdx];
       const displayContent = cleanUserMessage(userMsg.content);
-      
+
       if (!displayContent) return;
-      
+
       // 找到这轮的所有 assistant 消息
       const nextUserIdx = userMessageIndices[roundIndex + 1] ?? messages.length;
       const assistantMessages = messages.slice(userIdx + 1, nextUserIdx).filter(m => m.role === "assistant");
-      
+
       // 聚合内容
       const allThinkingBlocks: ThinkingBlock[] = [];
       const allToolCalls: ToolCallInfo[] = [];
       let finalAnswer = "";
-      
+
       assistantMessages.forEach(msg => {
         const parsed = parseAssistantMessage(msg.content, toolResults);
         allThinkingBlocks.push(...parsed.thinkingBlocks);
@@ -548,13 +532,13 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
           finalAnswer = parsed.finalAnswer;
         }
       });
-      
+
       // 使用用户消息内容的前 50 字符作为稳定 key
       const roundKey = `round-${displayContent.slice(0, 50)}`;
-      
+
       // 判断是否有 AI 回复内容
       const hasAIContent = allThinkingBlocks.length > 0 || allToolCalls.length > 0 || !!finalAnswer;
-      
+
       result.push({
         userIdx,
         userContent: displayContent,
@@ -565,10 +549,10 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
         hasAIContent,
       });
     });
-    
+
     return result;
   }, [messages, toolResults]);
-  
+
   return (
     <div className={className}>
       {rounds.map((round, index) => {
@@ -576,7 +560,7 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
         const totalSteps = round.thinkingBlocks.length + round.toolCalls.length;
         // 只有最后一轮且 Agent 正在运行时才是"当前轮次"
         const isCurrentRound = isRunning && index === rounds.length - 1;
-        
+
         return (
           <div key={round.roundKey}>
             {/* 用户消息 */}
@@ -585,7 +569,7 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
                 <span className="text-sm">{round.userContent}</span>
               </div>
             </div>
-            
+
             {/* AI 回复 - 只有在有内容时才显示 */}
             {round.hasAIContent && (
               <div className="flex gap-3 mb-4">
@@ -602,9 +586,9 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
                       isCurrentRound={isCurrentRound}
                     />
                   )}
-                  
+
                   {round.finalAnswer && (
-                    <div 
+                    <div
                       className="prose prose-sm dark:prose-invert max-w-none leading-relaxed"
                       dangerouslySetInnerHTML={{ __html: parseMarkdown(round.finalAnswer) }}
                     />
@@ -615,7 +599,7 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
           </div>
         );
       })}
-      
+
       {/* 超时提示 */}
       {isRunning && isLongRunning && onRetryTimeout && (
         <motion.div
@@ -624,13 +608,13 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
           className="flex items-center gap-2 px-3 py-2 bg-amber-500/10 border border-amber-500/30 rounded-lg text-amber-600 dark:text-amber-400 text-sm mt-2"
         >
           <AlertTriangle size={16} className="shrink-0" />
-          <span>检测到响应时间过长</span>
+          <span>当前 LLM 请求响应时间过长（超过 2 分钟）</span>
           <button
             onClick={onRetryTimeout}
             className="ml-auto flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/20 hover:bg-amber-500/30 rounded-md transition-colors font-medium"
           >
             <RefreshCw size={14} />
-            <span>点击重试</span>
+            <span>中断并重试</span>
           </button>
         </motion.div>
       )}
@@ -643,13 +627,13 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
  */
 export function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
-  
+
   const handleCopy = async () => {
     await navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
-  
+
   return (
     <button
       onClick={handleCopy}

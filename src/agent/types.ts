@@ -5,9 +5,9 @@
 import type { Message, LLMConfig } from "@/services/llm";
 
 // 重新导出 LLM 类型供外部使用
-export type { 
-  Message, 
-  LLMOptions, 
+export type {
+  Message,
+  LLMOptions,
   LLMResponse,
   LLMToolCall,
   LLMProvider,
@@ -17,12 +17,12 @@ export type {
 
 // ============ Agent 状态 ============
 
-export type AgentStatus = 
-  | "idle" 
-  | "running" 
-  | "waiting_approval" 
-  | "completed" 
-  | "error" 
+export type AgentStatus =
+  | "idle"
+  | "running"
+  | "waiting_approval"
+  | "completed"
+  | "error"
   | "aborted";
 
 export interface AgentState {
@@ -33,6 +33,9 @@ export interface AgentState {
   consecutiveErrors: number;
   lastError: string | null;
   llmConfig?: Partial<LLMConfig>;
+  // LLM 请求级别的超时检测
+  llmRequestStartTime?: number | null;
+  llmRequestCount?: number;
 }
 
 // ============ 工具系统 ============
@@ -112,12 +115,12 @@ export interface AgentMode {
 
 // ============ 事件系统 ============
 
-export type AgentEventType = 
-  | "message" 
-  | "tool_call" 
-  | "tool_result" 
-  | "status_change" 
-  | "error" 
+export type AgentEventType =
+  | "message"
+  | "tool_call"
+  | "tool_result"
+  | "status_change"
+  | "error"
   | "complete";
 
 export interface AgentEvent {

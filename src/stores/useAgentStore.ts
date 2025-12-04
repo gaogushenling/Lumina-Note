@@ -4,10 +4,10 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { 
-  AgentStatus, 
-  Message, 
-  ToolCall, 
+import {
+  AgentStatus,
+  Message,
+  ToolCall,
   AgentModeSlug,
   TaskContext,
   LLMConfig
@@ -64,10 +64,10 @@ interface AgentState {
   currentTask: string | null;
   lastError: string | null;
   lastIntent: Intent | null;
-  
-  // 超时检测
-  taskStartTime: number | null;  // 当前任务/工具开始时间
-  isLongRunning: boolean;        // 是否超时（超过 2 分钟）
+
+  // 超时检测（LLM 请求级别）
+  llmRequestStartTime: number | null;  // 当前 LLM 请求开始时间
+  llmRequestCount: number;             // 当前 task 中的 LLM 请求次数（用于幂等重试）
 
   // 会话
   sessions: AgentSession[];
@@ -106,14 +106,14 @@ export const useAgentStore = create<AgentState>()(
     (set, get) => {
       // 监听 Agent Loop 状态变化
       let cleanupListeners: (() => void)[] = [];
-      
+
       const setupListeners = () => {
         // 先清理旧的监听器
         cleanupListeners.forEach(cleanup => cleanup());
         cleanupListeners = [];
-        
+
         const loop = getAgentLoop();
-        
+
         cleanupListeners.push(
           loop.on("status_change", () => {
             get()._updateFromLoop();
@@ -147,7 +147,7 @@ export const useAgentStore = create<AgentState>()(
 
       // 延迟初始化监听器
       setTimeout(setupListeners, 0);
-      
+
       // 导出 setupListeners 供 resetAgentLoop 后重新调用
       (globalThis as any).__agentSetupListeners = setupListeners;
 
@@ -163,10 +163,10 @@ export const useAgentStore = create<AgentState>()(
         currentTask: null,
         lastError: null,
         lastIntent: null,
-        
-        // 超时检测
-        taskStartTime: null,
-        isLongRunning: false,
+
+        // 超时检测（LLM 请求级别）
+        llmRequestStartTime: null,
+        llmRequestCount: 0,
 
         // 会话列表
         sessions: [
@@ -198,7 +198,7 @@ export const useAgentStore = create<AgentState>()(
           resetAgentLoop();
           // 重新设置监听器
           (globalThis as any).__agentSetupListeners?.();
-          
+
           const id = `agent-${Date.now()}`;
           const createdAt = Date.now();
           const session: AgentSession = {
@@ -295,7 +295,7 @@ export const useAgentStore = create<AgentState>()(
             get().createSession();
           }
           const loop = getAgentLoop();
-          
+
           // 恢复当前会话的消息历史到 AgentLoop（切换会话后 AgentLoop 是空的）
           const currentSession = sessions.find((s) => s.id === currentSessionId);
           const sessionMessages = currentSession?.messages ?? [];
@@ -328,13 +328,13 @@ export const useAgentStore = create<AgentState>()(
               sessions: state.sessions.map((s) =>
                 s.id === state.currentSessionId
                   ? {
-                      ...s,
-                      title: s.title === "新对话" ? newTitle : s.title,
-                      currentTask: displayContent,
-                      messages: newMessages,
-                      lastError: null,
-                      updatedAt: Date.now(),
-                    }
+                    ...s,
+                    title: s.title === "新对话" ? newTitle : s.title,
+                    currentTask: displayContent,
+                    messages: newMessages,
+                    lastError: null,
+                    updatedAt: Date.now(),
+                  }
                   : s
               ),
             };
@@ -362,7 +362,7 @@ export const useAgentStore = create<AgentState>()(
             if (config.routing?.enabled) {
               // 获取最新消息历史
               const currentMessages = get().messages;
-              
+
               const intent = await intentRouter.route(message, currentMessages);
               console.log('[Agent] Intent detected:', intent);
 
@@ -381,14 +381,14 @@ export const useAgentStore = create<AgentState>()(
 
               // 规则匹配：如果意图是 chat 或 search，且配置了 chatProvider，则使用 chatModel
               if (["chat", "search"].includes(intent.type) && config.routing.chatProvider) {
-                 configOverride = {
-                   provider: config.routing.chatProvider,
-                   apiKey: config.routing.chatApiKey || config.apiKey,
-                   model: config.routing.chatModel,
-                   customModelId: config.routing.chatCustomModelId,
-                   baseUrl: config.routing.chatBaseUrl,
-                 };
-                 console.log('[Agent] Routing to chat model:', configOverride.model);
+                configOverride = {
+                  provider: config.routing.chatProvider,
+                  apiKey: config.routing.chatApiKey || config.apiKey,
+                  model: config.routing.chatModel,
+                  customModelId: config.routing.chatCustomModelId,
+                  baseUrl: config.routing.chatBaseUrl,
+                };
+                console.log('[Agent] Routing to chat model:', configOverride.model);
               }
 
               // 意图驱动的模式切换：根据意图自动切换到最合适的 Agent 模式
@@ -428,11 +428,11 @@ export const useAgentStore = create<AgentState>()(
               sessions: state.sessions.map((s) =>
                 s.id === state.currentSessionId
                   ? {
-                      ...s,
-                      status: "error",
-                      lastError: errMsg,
-                      updatedAt: Date.now(),
-                    }
+                    ...s,
+                    status: "error",
+                    lastError: errMsg,
+                    updatedAt: Date.now(),
+                  }
                   : s
               ),
             }));
@@ -485,14 +485,14 @@ export const useAgentStore = create<AgentState>()(
             sessions: state.sessions.map((s) =>
               s.id === state.currentSessionId
                 ? {
-                    ...s,
-                    status: "idle",
-                    messages: [],
-                    currentTask: null,
-                    lastError: null,
-                    lastIntent: null,
-                    updatedAt: Date.now(),
-                  }
+                  ...s,
+                  status: "idle",
+                  messages: [],
+                  currentTask: null,
+                  lastError: null,
+                  lastIntent: null,
+                  updatedAt: Date.now(),
+                }
                 : s
             ),
           }));
@@ -501,28 +501,28 @@ export const useAgentStore = create<AgentState>()(
         // 重新生成最后一条 AI 回复
         retry: async (context) => {
           const { messages, currentSessionId, sessions } = get();
-          
+
           // 找到最后一条用户消息
           const lastUserIndex = [...messages].reverse().findIndex(m => m.role === "user");
           if (lastUserIndex === -1) return;
-          
+
           const actualIndex = messages.length - 1 - lastUserIndex;
           const lastUserMessage = messages[actualIndex];
-          
+
           // 提取用户消息内容（从 <task> 标签中提取）
           let userContent = lastUserMessage.content;
           const taskMatch = userContent.match(/<task>([\s\S]*?)<\/task>/);
           if (taskMatch) {
             userContent = taskMatch[1].trim();
           }
-          
+
           // 删除最后一条用户消息及之后的所有消息
           const newMessages = messages.slice(0, actualIndex);
-          
+
           // 重置 AgentLoop
           resetAgentLoop();
           (globalThis as any).__agentSetupListeners?.();
-          
+
           // 如果有历史消息，恢复到 AgentLoop
           const loop = getAgentLoop();
           if (newMessages.length > 0) {
@@ -531,7 +531,7 @@ export const useAgentStore = create<AgentState>()(
             const fullMessages = currentSession?.messages.slice(0, actualIndex) ?? newMessages;
             loop.setMessages(fullMessages);
           }
-          
+
           // 更新状态
           set((state) => ({
             messages: newMessages,
@@ -542,56 +542,40 @@ export const useAgentStore = create<AgentState>()(
                 : s
             ),
           }));
-          
+
           // 重新发送
           await get().startTask(userContent, context);
         },
 
-        // 超时重试：中断当前任务，追加提示，继续执行
+        // 超时重试当前 LLM 请求：中断当前请求，重新调用（保证幂等）
         retryTimeout: async (context) => {
           const loop = getAgentLoop();
-          
-          // 1. 中断当前任务
+          const { llmRequestCount } = get();
+
+          // 1. 中断当前请求
           loop.abort();
-          
-          // 2. 获取当前消息
-          const { messages, pendingTool } = get();
-          
-          // 3. 追加超时提示消息
-          const timeoutMessage = pendingTool 
-            ? `⚠️ 工具 ${pendingTool.name} 执行超时，请重新考虑并尝试其他方式完成任务。`
-            : `⚠️ 上一次请求响应超时，请重新考虑并继续任务。`;
-          
-          // 4. 重置 AgentLoop 并恢复消息
-          resetAgentLoop();
-          (globalThis as any).__agentSetupListeners?.();
-          
-          const newLoop = getAgentLoop();
-          const loopState = newLoop.getState();
-          
-          // 恢复之前的消息（包括 system）
-          const systemMsg = loopState.messages.find(m => m.role === "system");
-          const allMessages = systemMsg 
-            ? [systemMsg, ...messages, { role: "user" as const, content: timeoutMessage }]
-            : [...messages, { role: "user" as const, content: timeoutMessage }];
-          
-          newLoop.setMessages(allMessages);
-          
-          // 5. 更新状态
-          set({ 
+
+          console.log(`[Agent] 重试第 ${llmRequestCount + 1} 次 LLM 请求（超时）`);
+
+          // 2. 追加超时提示（让 LLM 知道上次超时了）
+          const timeoutMessage = `⚠️ 上一次 LLM 请求响应超时（第 ${llmRequestCount + 1} 次请求），正在重新请求，请继续处理当前任务。`;
+
+          loop.addTimeoutHint(timeoutMessage);
+
+          // 3. 重置超时状态，继续执行（从当前消息状态继续）
+          set({
             status: "running",
             pendingTool: null,
-            taskStartTime: Date.now(),
-            isLongRunning: false,
+            llmRequestStartTime: null,  // 等下次 LLM 调用时重新设置
           });
-          
-          // 6. 继续执行 Agent 循环
+
+          // 4. 继续执行 Agent 循环（会复用当前的消息历史，保证幂等）
           try {
-            await newLoop.continueLoop(context);
+            await loop.continueLoop(context);
           } catch (error) {
             console.error("[Agent] Retry timeout failed:", error);
           }
-          
+
           get()._updateFromLoop();
         },
 
@@ -600,7 +584,7 @@ export const useAgentStore = create<AgentState>()(
             hasInitialized = true;
             const { sessions, currentSessionId } = get();
             const currentSession = sessions.find(s => s.id === currentSessionId);
-            
+
             // 如果当前会话存在且有消息，则创建新会话
             // 如果当前会话不存在，也创建新会话
             // 如果当前会话存在但为空（messages.length === 0），则复用它（不创建新的）
@@ -616,37 +600,44 @@ export const useAgentStore = create<AgentState>()(
           const loopState = loop.getState();
 
           const viewMessages = loopState.messages.filter((m) => m.role !== "system");
-          
+
           set((state) => {
             // 防止旧消息覆盖新消息（当 AgentLoop 还没同步时）
             // 只有当 loop 的消息数量 >= 当前 store 的消息数量时才更新
             const shouldUpdateMessages = viewMessages.length >= state.messages.length;
             const finalMessages = shouldUpdateMessages ? viewMessages : state.messages;
-            
+
             const newTitle = generateAgentTitleFromAssistant(finalMessages, "新对话");
-            
+
             // 任务结束时清除超时状态
             const isFinished = ["completed", "error", "idle", "aborted"].includes(loopState.status);
-            
+
+            // 从 AgentLoop 同步 LLM 请求时间和计数
+            const llmRequestStartTime = loopState.llmRequestStartTime ?? state.llmRequestStartTime;
+            const llmRequestCount = loopState.llmRequestCount ?? state.llmRequestCount;
+
             return {
               status: loopState.status,
               messages: finalMessages,
               pendingTool: loopState.pendingTool,
               currentTask: loopState.currentTask,
               lastError: loopState.lastError,
+              // 同步 LLM 请求状态
+              llmRequestStartTime,
+              llmRequestCount,
               // 任务结束时清除超时相关状态
-              ...(isFinished && { taskStartTime: null, isLongRunning: false }),
+              ...(isFinished && { llmRequestStartTime: null, llmRequestCount: 0 }),
               sessions: state.sessions.map((s) =>
                 s.id === state.currentSessionId
                   ? {
-                      ...s,
-                      title: s.title === "新对话" ? newTitle : s.title,
-                      status: loopState.status,
-                      messages: finalMessages,
-                      currentTask: loopState.currentTask,
-                      lastError: loopState.lastError,
-                      updatedAt: Date.now(),
-                    }
+                    ...s,
+                    title: s.title === "新对话" ? newTitle : s.title,
+                    status: loopState.status,
+                    messages: finalMessages,
+                    currentTask: loopState.currentTask,
+                    lastError: loopState.lastError,
+                    updatedAt: Date.now(),
+                  }
                   : s
               ),
             };
@@ -660,7 +651,7 @@ export const useAgentStore = create<AgentState>()(
             set({ lastAutoApprovedTool: loopState.pendingTool });
             get().approve();
           }
-          
+
           // 任务完成或出错时清除自动审批标记
           if (loopState.status === "completed" || loopState.status === "error" || loopState.status === "idle") {
             set({ lastAutoApprovedTool: null });

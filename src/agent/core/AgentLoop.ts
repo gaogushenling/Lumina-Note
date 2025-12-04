@@ -7,10 +7,10 @@
  * 3. 处理用户审批流程
  */
 
-import { 
-  Message, 
-  TaskContext, 
-  ToolCall, 
+import {
+  Message,
+  TaskContext,
+  ToolCall,
   ToolResult,
   AgentEventHandler,
   AgentEventType,
@@ -57,7 +57,7 @@ export class AgentLoop {
     // 保存现有消息（不重置）
     const existingMessages = this.stateManager.getMessages();
     const hasHistory = existingMessages.length > 1; // 除了 system 消息外还有其他消息
-    
+
     // 重置状态但保留消息历史
     this.stateManager.setStatus("running");
     this.stateManager.setTask(userMessage);
@@ -74,8 +74,8 @@ export class AgentLoop {
 
     if (hasHistory) {
       // 保留历史，更新 system prompt，添加新用户消息
-      let newMessages = existingMessages.map((msg, i) => 
-        i === 0 && msg.role === "system" 
+      let newMessages = existingMessages.map((msg, i) =>
+        i === 0 && msg.role === "system"
           ? { role: "system" as const, content: systemPrompt }
           : msg
       );
@@ -108,7 +108,7 @@ export class AgentLoop {
   abort(): void {
     this.abortController?.abort();
     this.stateManager.setStatus("aborted");
-    
+
     // 如果正在等待审批，拒绝
     if (this.approvalResolver) {
       this.approvalResolver(false);
@@ -134,10 +134,10 @@ export class AgentLoop {
     this.abortController = new AbortController();
     this.stateManager.setLLMConfig(configOverride);
     this.stateManager.setStatus("running");
-    
+
     try {
       await this.runLoop(context);
-      
+
       const status = this.stateManager.getStatus();
       if (status === "running") {
         this.stateManager.setStatus("completed");
@@ -150,6 +150,16 @@ export class AgentLoop {
         this.stateManager.setError(error instanceof Error ? error.message : "未知错误");
       }
     }
+  }
+
+  /**
+   * 添加超时提示（用于 LLM 请求超时时追加提示消息）
+   */
+  addTimeoutHint(hint: string): void {
+    this.stateManager.addMessage({
+      role: "user",
+      content: hint,
+    });
   }
 
   /**
@@ -173,15 +183,15 @@ export class AgentLoop {
    */
   private async runLoop(context: TaskContext): Promise<void> {
     while (
-      this.stateManager.getStatus() === "running" && 
+      this.stateManager.getStatus() === "running" &&
       !this.abortController?.signal.aborted
     ) {
       try {
         const messages = this.stateManager.getMessages();
-        
+
         // 1. 获取当前模式可用的工具名称
         const toolNames = context.mode?.tools || [];
-        
+
         // 2. 调用 LLM（传入工具用于 FC 模式）
         const response = await this.callLLM(messages, toolNames);
 
@@ -189,7 +199,7 @@ export class AgentLoop {
         let toolCalls: ToolCall[];
         let isCompletion = false;
         let isFCMode = false;
-        
+
         if (response.toolCalls && response.toolCalls.length > 0) {
           // FC 模式：直接使用结构化的工具调用
           isFCMode = true;
@@ -219,7 +229,7 @@ export class AgentLoop {
           }).join('\n\n');
           assistantContent = `${response.content}\n\n${toolCallsXml}`;
         }
-        
+
         this.stateManager.addMessage({
           role: "assistant",
           content: assistantContent,
@@ -244,10 +254,10 @@ export class AgentLoop {
           // 检查是否是纯文本回复（可能是闲聊）
           // 移除 thinking 标签后，如果剩余内容不包含类似工具调用的标签，则视为普通回复
           const cleanContent = response.content.replace(/<thinking>[\s\S]*?<\/thinking>/g, "").trim();
-          
+
           // 移除代码块，避免误判代码中的标签
           const contentWithoutCode = cleanContent.replace(/```[\s\S]*?```/g, "");
-          
+
           // 检查是否有潜在的工具标签（简单的启发式：包含下划线的标签通常是工具，如 <read_note>）
           // 如果 parseResponse 没解析出来，但这里匹配到了，说明可能是格式错误的工具调用
           const hasPotentialToolTag = /<[a-z]+(_[a-z]+)+/i.test(contentWithoutCode);
@@ -256,7 +266,7 @@ export class AgentLoop {
           // 对于 editor/organizer，我们期望它至少调用 ask_user 或 attempt_completion
           const currentMode = context.mode?.slug;
           const intent = context.intent;
-          
+
           // 如果意图明确是 chat，则允许纯文本回复
           if (intent === "chat") {
             this.stateManager.setStatus("completed");
@@ -274,10 +284,10 @@ export class AgentLoop {
               // 否则，强制要求使用工具，防止 Agent 幻觉（说做了但没做）
               const isShortReply = cleanContent.length < 50;
               const isQuestion = cleanContent.includes("?") || cleanContent.includes("？");
-              
+
               // 只有当意图不是明确的操作意图时，才允许简短回复通过
               // 如果意图明确是 create/edit/organize，即使回复很短，也必须使用工具（除非是提问）
-              
+
               if ((isShortReply || isQuestion) && (!isExplicitActionIntent || isQuestion)) {
                 this.stateManager.setStatus("completed");
                 break;
@@ -291,7 +301,7 @@ export class AgentLoop {
           }
 
           this.stateManager.incrementErrors();
-          
+
           if (this.stateManager.getConsecutiveErrors() >= MAX_CONSECUTIVE_ERRORS) {
             this.stateManager.setStatus("error");
             this.stateManager.setError("Agent 未能正确使用工具");
@@ -306,7 +316,7 @@ export class AgentLoop {
         }
       } catch (error) {
         this.handleError(error);
-        
+
         if (this.stateManager.getStatus() === "error") {
           break;
         }
@@ -320,14 +330,34 @@ export class AgentLoop {
    */
   private async callLLM(messages: Message[], toolNames?: string[]): Promise<LLMResponse> {
     const configOverride = this.stateManager.getLLMConfig();
-    
+
+    // 记录 LLM 请求开始时间并增加计数
+    this.stateManager.setLLMRequestStartTime(Date.now());
+    this.stateManager.incrementLLMRequestCount();
+
+    const requestCount = this.stateManager.getLLMRequestCount();
+    console.log(`[Agent] LLM 请求 #${requestCount} 开始`);
+
     // 获取工具 schemas 用于 FC 模式
     const tools = toolNames ? getToolSchemas(toolNames) : undefined;
-    
-    return callLLM(messages, {
-      signal: this.abortController?.signal,
-      tools,
-    }, configOverride);
+
+    try {
+      const response = await callLLM(messages, {
+        signal: this.abortController?.signal,
+        tools,
+      }, configOverride);
+
+      console.log(`[Agent] LLM 请求 #${requestCount} 完成`);
+
+      // 请求完成后清除开始时间（但保留计数）
+      this.stateManager.setLLMRequestStartTime(null);
+
+      return response;
+    } catch (error) {
+      console.error(`[Agent] LLM 请求 #${requestCount} 失败:`, error);
+      this.stateManager.setLLMRequestStartTime(null);
+      throw error;
+    }
   }
 
   /**
@@ -345,13 +375,13 @@ export class AgentLoop {
         // 先创建等待 Promise（设置 resolver），再更新状态
         // 这样自动审批的回调才能正确调用 resolver
         const approvalPromise = this.waitForApproval();
-        
+
         this.stateManager.setStatus("waiting_approval");
         this.stateManager.setPendingTool(toolCall);
 
         // 等待用户审批
         const approved = await approvalPromise;
-        
+
         if (!approved) {
           this.stateManager.addMessage({
             role: "user",
@@ -379,7 +409,7 @@ export class AgentLoop {
 
       // 将结果添加到消息
       let resultMsg = formatToolResult(toolCall, result);
-      
+
       // 如果执行失败，追加反思提示
       if (!result.success) {
         resultMsg += `\n\n❌ 系统拒绝执行：检测到工具调用错误。\n\n请立即反思：\n1. 工具名称是否正确？\n2. 参数格式是否符合 JSON 规范？\n3. 参数值是否有效？(特别是文件路径是否包含特殊字符或格式错误)\n\n请在下一次回复中：\n1. 必须使用 <thinking> 标签详细分析错误原因\n2. 修正错误并重新调用工具`;
@@ -513,9 +543,9 @@ export class AgentLoop {
         this.stateManager.setStatus("aborted");
         return;
       }
-      
+
       this.stateManager.incrementErrors();
-      
+
       if (this.stateManager.getConsecutiveErrors() >= MAX_CONSECUTIVE_ERRORS) {
         this.stateManager.setStatus("error");
         this.stateManager.setError(error.message);

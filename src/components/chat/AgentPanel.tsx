@@ -47,7 +47,7 @@ export function AgentPanel() {
     reject,
     clearChat,
     retry,
-    taskStartTime,
+    llmRequestStartTime,
     retryTimeout,
   } = useAgentStore();
 
@@ -77,161 +77,159 @@ export function AgentPanel() {
 
   return (
     <div className="flex flex-col h-full bg-background">
-        {/* 头部 */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-          <div className="flex items-center gap-2">
-            <Bot className="w-5 h-5 text-primary" />
-            <span className="font-medium text-foreground">Lumina Agent</span>
+      {/* 头部 */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+        <div className="flex items-center gap-2">
+          <Bot className="w-5 h-5 text-primary" />
+          <span className="font-medium text-foreground">Lumina Agent</span>
+        </div>
+        <div className="flex items-center gap-2">
+          {/* 模式选择 */}
+          <ModeSelector mode={mode} onChange={setMode} />
+          {/* 清空按钮 */}
+          <button
+            onClick={clearChat}
+            className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+            title="清空对话"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* 消息列表 */}
+      <div className="flex-1 overflow-y-auto p-3 space-y-3">
+        {/* 欢迎消息 */}
+        {messages.length === 0 && (
+          <div className="text-sm text-muted-foreground leading-relaxed">
+            <p>{MODES[mode].roleDefinition}</p>
+            <p className="mt-2 text-xs opacity-70">输入任务指令开始</p>
           </div>
-          <div className="flex items-center gap-2">
-            {/* 模式选择 */}
-            <ModeSelector mode={mode} onChange={setMode} />
-            {/* 清空按钮 */}
+        )}
+
+        {/* 消息列表 - 使用 AgentMessageRenderer 组件 */}
+        <AgentMessageRenderer
+          messages={messages}
+          isRunning={status === "running"}
+          llmRequestStartTime={llmRequestStartTime}
+          onRetryTimeout={() => retryTimeout({
+            workspacePath: vaultPath || "",
+            activeNote: currentFile || undefined,
+            activeNoteContent: currentFile ? currentContent : undefined,
+          })}
+        />
+
+        {/* 工具审批 */}
+        {pendingTool && status === "waiting_approval" && (
+          <ToolApproval
+            toolName={pendingTool.name}
+            params={pendingTool.params}
+            onApprove={approve}
+            onReject={reject}
+          />
+        )}
+
+        {/* 加载状态 */}
+        {status === "running" && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span>思考中...</span>
+          </div>
+        )}
+
+        {/* 错误状态 */}
+        {status === "error" && (
+          <div className="text-sm text-red-500 p-2 bg-red-500/10 rounded">
+            发生错误，请重试
+          </div>
+        )}
+
+        {/* Retry 按钮 - 只在有消息且不在运行时显示 */}
+        {messages.length > 0 && messages.some(m => m.role === "assistant") && status !== "running" && (
+          <div className="flex justify-end">
             <button
-              onClick={clearChat}
-              className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
-              title="清空对话"
+              onClick={() => {
+                if (!vaultPath) return;
+                retry({
+                  workspacePath: vaultPath,
+                  activeNote: currentFile || undefined,
+                  activeNoteContent: currentContent || undefined,
+                });
+              }}
+              className="flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-accent rounded transition-colors"
+              title="重新生成"
             >
-              <Trash2 className="w-4 h-4" />
+              <RefreshCw size={12} />
+              重新生成
             </button>
           </div>
+        )}
+
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* 输入区域 - 样式对齐 Chat 输入框（自定义 textarea + 统一底部按钮） */}
+      <div className="p-3 border-t border-border">
+        <div className="mb-2 flex justify-between items-center">
+          <span className="text-xs text-muted-foreground">
+            {MODES[mode].name}
+          </span>
         </div>
 
-        {/* 消息列表 */}
-        <div className="flex-1 overflow-y-auto p-3 space-y-3">
-          {/* 欢迎消息 */}
-          {messages.length === 0 && (
-            <div className="text-sm text-muted-foreground leading-relaxed">
-              <p>{MODES[mode].roleDefinition}</p>
-              <p className="mt-2 text-xs opacity-70">输入任务指令开始</p>
-            </div>
-          )}
-
-          {/* 消息列表 - 使用 AgentMessageRenderer 组件 */}
-          <AgentMessageRenderer 
-            messages={messages} 
-            isRunning={status === "running"}
-            taskStartTime={taskStartTime}
-            onRetryTimeout={() => retryTimeout({
-              workspacePath: vaultPath || "",
-              activeNote: currentFile || undefined,
-              activeNoteContent: currentFile ? currentContent : undefined,
-            })}
+        <div className="bg-muted/30 border border-border rounded-lg p-2 focus-within:ring-1 focus-within:ring-primary/50 transition-all">
+          <ChatInput
+            value={input}
+            onChange={setInput}
+            onSend={handleSendWithFiles}
+            isLoading={status === "running"}
+            isStreaming={status === "running"}
+            onStop={abort}
+            placeholder="输入任务指令... (@ 引用文件)"
+            rows={3}
+            hideSendButton={true}
           />
-
-          {/* 工具审批 */}
-          {pendingTool && status === "waiting_approval" && (
-            <ToolApproval
-              toolName={pendingTool.name}
-              params={pendingTool.params}
-              onApprove={approve}
-              onReject={reject}
-            />
-          )}
-
-          {/* 加载状态 */}
-          {status === "running" && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="w-4 h-4 animate-spin" />
-              <span>思考中...</span>
+          <div className="flex items-center mt-2 gap-2">
+            <div className="flex gap-2 items-center text-xs text-muted-foreground shrink-0">
+              <span>@ 添加文件</span>
             </div>
-          )}
-
-          {/* 错误状态 */}
-          {status === "error" && (
-            <div className="text-sm text-red-500 p-2 bg-red-500/10 rounded">
-              发生错误，请重试
+            {/* 流式显示中间识别结果 */}
+            <div className="flex-1 truncate text-sm text-foreground/70 italic">
+              {interimText && <span className="animate-pulse">{interimText}...</span>}
             </div>
-          )}
-
-          {/* Retry 按钮 - 只在有消息且不在运行时显示 */}
-          {messages.length > 0 && messages.some(m => m.role === "assistant") && status !== "running" && (
-            <div className="flex justify-end">
+            <div className="flex items-center gap-1">
               <button
-                onClick={() => {
-                  if (!vaultPath) return;
-                  retry({
-                    workspacePath: vaultPath,
-                    activeNote: currentFile || undefined,
-                    activeNoteContent: currentContent || undefined,
-                  });
-                }}
-                className="flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-accent rounded transition-colors"
-                title="重新生成"
+                type="button"
+                onClick={toggleRecording}
+                className={`p-1.5 rounded-md border flex items-center justify-center transition-colors relative ${isRecording
+                    ? "bg-red-500/20 border-red-500 text-red-500"
+                    : "bg-background border-border text-muted-foreground hover:bg-accent"
+                  }`}
+                title={isRecording ? "停止语音输入" : "开始语音输入"}
               >
-                <RefreshCw size={12} />
-                重新生成
+                {isRecording && (
+                  <span className="absolute inset-0 rounded-md animate-ping bg-red-500/30" />
+                )}
+                {isRecording ? <MicOff size={14} className="relative z-10" /> : <Mic size={14} />}
+              </button>
+              <button
+                onClick={() => status === "running" ? abort() : handleSendWithFiles(input, [])}
+                disabled={(!input.trim() && status !== "running")}
+                className={`${status === "running"
+                    ? "bg-red-500 hover:bg-red-600 text-white"
+                    : "bg-primary hover:bg-primary/90 text-primary-foreground"
+                  } disabled:opacity-50 rounded p-1.5 transition-colors flex items-center justify-center`}
+                title={status === "running" ? "停止" : "发送"}
+              >
+                {status === "running" ? (
+                  <Square size={14} fill="currentColor" />
+                ) : (
+                  <Send size={14} />
+                )}
               </button>
             </div>
-          )}
-
-          <div ref={messagesEndRef} />
-        </div>
-
-        {/* 输入区域 - 样式对齐 Chat 输入框（自定义 textarea + 统一底部按钮） */}
-        <div className="p-3 border-t border-border">
-          <div className="mb-2 flex justify-between items-center">
-            <span className="text-xs text-muted-foreground">
-              {MODES[mode].name}
-            </span>
-          </div>
-
-          <div className="bg-muted/30 border border-border rounded-lg p-2 focus-within:ring-1 focus-within:ring-primary/50 transition-all">
-            <ChatInput
-              value={input}
-              onChange={setInput}
-              onSend={handleSendWithFiles}
-              isLoading={status === "running"}
-              isStreaming={status === "running"}
-              onStop={abort}
-              placeholder="输入任务指令... (@ 引用文件)"
-              rows={3}
-              hideSendButton={true}
-            />
-            <div className="flex items-center mt-2 gap-2">
-              <div className="flex gap-2 items-center text-xs text-muted-foreground shrink-0">
-                <span>@ 添加文件</span>
-              </div>
-              {/* 流式显示中间识别结果 */}
-              <div className="flex-1 truncate text-sm text-foreground/70 italic">
-                {interimText && <span className="animate-pulse">{interimText}...</span>}
-              </div>
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={toggleRecording}
-                  className={`p-1.5 rounded-md border flex items-center justify-center transition-colors relative ${
-                    isRecording
-                      ? "bg-red-500/20 border-red-500 text-red-500"
-                      : "bg-background border-border text-muted-foreground hover:bg-accent"
-                  }`}
-                  title={isRecording ? "停止语音输入" : "开始语音输入"}
-                >
-                  {isRecording && (
-                    <span className="absolute inset-0 rounded-md animate-ping bg-red-500/30" />
-                  )}
-                  {isRecording ? <MicOff size={14} className="relative z-10" /> : <Mic size={14} />}
-                </button>
-                <button
-                  onClick={() => status === "running" ? abort() : handleSendWithFiles(input, [])}
-                  disabled={(!input.trim() && status !== "running")}
-                  className={`${
-                    status === "running" 
-                      ? "bg-red-500 hover:bg-red-600 text-white" 
-                      : "bg-primary hover:bg-primary/90 text-primary-foreground"
-                  } disabled:opacity-50 rounded p-1.5 transition-colors flex items-center justify-center`}
-                  title={status === "running" ? "停止" : "发送"}
-                >
-                  {status === "running" ? (
-                    <Square size={14} fill="currentColor" />
-                  ) : (
-                    <Send size={14} />
-                  )}
-                </button>
-              </div>
-            </div>
           </div>
         </div>
+      </div>
     </div>
   );
 }

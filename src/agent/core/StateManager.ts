@@ -21,6 +21,8 @@ export class StateManager {
       consecutiveErrors: 0,
       lastError: null,
       llmConfig: undefined,
+      llmRequestStartTime: null,
+      llmRequestCount: 0,
     };
   }
 
@@ -46,12 +48,20 @@ export class StateManager {
     return this.state.llmConfig;
   }
 
+  getLLMRequestStartTime(): number | null {
+    return this.state.llmRequestStartTime ?? null;
+  }
+
+  getLLMRequestCount(): number {
+    return this.state.llmRequestCount ?? 0;
+  }
+
   // ============ 状态更新 ============
 
   setStatus(status: AgentStatus): void {
     const previousStatus = this.state.status;
     this.state.status = status;
-    
+
     if (previousStatus !== status) {
       this.emit("status_change", { previousStatus, newStatus: status });
     }
@@ -98,6 +108,19 @@ export class StateManager {
     if (error) {
       this.emit("error", { error });
     }
+  }
+
+  setLLMRequestStartTime(time: number | null): void {
+    this.state.llmRequestStartTime = time;
+  }
+
+  incrementLLMRequestCount(): void {
+    this.state.llmRequestCount = (this.state.llmRequestCount ?? 0) + 1;
+  }
+
+  resetLLMRequestCount(): void {
+    this.state.llmRequestCount = 0;
+    this.state.llmRequestStartTime = null;
   }
 
   // ============ 重置 ============

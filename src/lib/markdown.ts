@@ -286,6 +286,11 @@ export function parseMarkdown(markdown: string): string {
       html = (html as string).split(placeholder).join(mathHtml);
     });
 
+    // 6. Wrap tables in a scrollable container to fix alignment issues
+    // Replace <table> with <div class="table-wrapper"><table>
+    html = (html as string).replace(/<table>/g, '<div class="table-wrapper"><table>');
+    html = (html as string).replace(/<\/table>/g, '</table></div>');
+
     return html as string;
   } catch (error) {
     console.error("Markdown parse error:", error);

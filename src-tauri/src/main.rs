@@ -18,6 +18,7 @@ fn main() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_os::init())
         .invoke_handler(tauri::generate_handler![
             commands::read_file,
             commands::save_file,
@@ -85,12 +86,22 @@ fn main() {
             llm::append_debug_log,
             llm::get_debug_log_path,
         ])
-        .setup(|_app| {
+        .setup(|app| {
+            let window = app.get_webview_window("main").unwrap();
+            
+            // Mac 上启用 decorations 并使用透明标题栏，避免无边框窗口的兼容性问题
+            #[cfg(target_os = "macos")]
+            {
+                use tauri::TitleBarStyle;
+                let _ = window.set_decorations(true);
+                let _ = window.set_title_bar_style(TitleBarStyle::Overlay);
+            }
+            
             #[cfg(debug_assertions)]
             {
-                let window = _app.get_webview_window("main").unwrap();
                 window.open_devtools();
             }
+            
             Ok(())
         })
         .run(tauri::generate_context!())

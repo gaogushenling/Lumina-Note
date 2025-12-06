@@ -1,16 +1,30 @@
 /**
  * 自定义标题栏
  * 替代系统标题栏，支持主题颜色
+ * Mac 上使用原生透明标题栏，只显示拖拽区域
  */
 
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Minus, Square, X, Copy } from "lucide-react";
 import { useState, useEffect } from "react";
+import { platform } from "@tauri-apps/plugin-os";
 
 export function TitleBar() {
   const [isMaximized, setIsMaximized] = useState(false);
+  const [isMac, setIsMac] = useState(false);
 
   useEffect(() => {
+    // 检测平台
+    const checkPlatform = async () => {
+      try {
+        const os = platform();
+        setIsMac(os === "macos");
+      } catch (e) {
+        console.warn("Failed to detect platform:", e);
+      }
+    };
+    checkPlatform();
+    
     // 监听窗口最大化状态
     const checkMaximized = async () => {
       try {
@@ -66,6 +80,27 @@ export function TitleBar() {
     }
   };
 
+  // Mac 上使用原生标题栏，只需要一个透明的拖拽区域
+  if (isMac) {
+    return (
+      <div 
+        className="h-8 flex items-center bg-transparent select-none"
+        data-tauri-drag-region
+      >
+        {/* Mac 上左侧留空给原生红绿灯按钮 */}
+        <div className="w-20" />
+        {/* 中间：应用标题 */}
+        <div className="flex-1 flex items-center justify-center">
+          <span className="text-xs text-muted-foreground font-medium pointer-events-none">
+            Lumina Note
+          </span>
+        </div>
+        <div className="w-20" />
+      </div>
+    );
+  }
+
+  // Windows/Linux 使用自定义标题栏
   return (
     <div 
       className="h-8 flex items-center justify-between bg-muted border-b border-border select-none"

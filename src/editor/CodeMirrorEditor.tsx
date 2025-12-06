@@ -78,7 +78,9 @@ const editorTheme = EditorView.theme({
   },
   ".cm-line": {
     padding: "0 16px",
+    paddingLeft: "16px", // 基础左边距
     lineHeight: "1.75",
+    position: "relative", // 作为绝对定位的锚点
   },
   ".cm-cursor": {
     borderLeftColor: "hsl(var(--primary))",
@@ -128,6 +130,11 @@ const editorTheme = EditorView.theme({
   ".cm-header-5, .cm-header-6": {
     fontWeight: "600",
     color: "hsl(var(--md-heading, var(--foreground)))",
+  },
+  // 标题行往左移动
+  ".cm-line.cm-heading-line": {
+    paddingLeft: "0 !important",
+    marginLeft: "16px",
   },
   // 粗体/斜体
   ".cm-strong": { 
@@ -180,14 +187,48 @@ const editorTheme = EditorView.theme({
   ".cm-list-bullet, .cm-list-number": {
     color: "hsl(var(--md-list-marker, var(--primary)))",
   },
-  // Live Preview 隐藏的语法标记
+  // Live Preview 语法标记 - 悬挂布局
   ".cm-formatting": {
     color: "hsl(var(--muted-foreground) / 0.6)",
   },
-  // 隐藏语法标记但保留空间，避免布局偏移
+  // 悬挂布局：标记符号绝对定位到左侧 gutter（用于行首标记 #, -, >）
+  ".cm-formatting-hanging": {
+    position: "absolute",
+    right: "100%", // 悬挂在内容左边
+    marginRight: "8px",
+    color: "hsl(var(--muted-foreground) / 0.6)",
+    fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+    fontSize: "0.9em",
+    userSelect: "none",
+    pointerEvents: "none",
+    whiteSpace: "nowrap",
+  },
+  // 行内标记（**, *, ==, `）- 使用 max-width 动画展开
+  ".cm-formatting-inline": {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    whiteSpace: "nowrap",
+    verticalAlign: "baseline",
+    color: "hsl(var(--muted-foreground) / 0.6)",
+    fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+    fontSize: "0.85em",
+    // 初始状态：收缩隐藏
+    maxWidth: "0",
+    opacity: "0",
+    // 丝滑的贝塞尔曲线动画
+    transition: "max-width 0.25s cubic-bezier(0.2, 0, 0.2, 1), opacity 0.2s ease-out",
+  },
+  // 激活行时展开行内标记
+  ".cm-formatting-inline-visible": {
+    maxWidth: "4ch", // 足够容纳 **, ==, ` 等
+    opacity: "1",
+    margin: "0 1px", // 展开时给一点呼吸空间
+  },
+  // 隐藏语法标记（非激活行，用于行首标记）
   ".cm-formatting-hidden": {
-    color: "transparent",
-    // 保持原有尺寸，不改变布局
+    display: "none",
   },
   // 标签
   ".cm-tag, .cm-hashtag": {
@@ -654,6 +695,28 @@ function buildMathDecorations(state: EditorState): DecorationSet {
   }
 }
 
+// 悬挂标记 Widget - 在左侧 gutter 显示标记符号
+class HangingMarkWidget extends WidgetType {
+  constructor(readonly mark: string) {
+    super();
+  }
+
+  eq(other: HangingMarkWidget) {
+    return other.mark === this.mark;
+  }
+
+  toDOM() {
+    const span = document.createElement("span");
+    span.className = "cm-formatting-hanging";
+    span.textContent = this.mark;
+    return span;
+  }
+
+  ignoreEvent() {
+    return true;
+  }
+}
+
 // 安全创建隐藏装饰的辅助函数
 function createHiddenDecoration(state: EditorState, from: number, to: number, decorations: any[]) {
   // 确保不跨行
@@ -727,52 +790,88 @@ function createLivePreviewDecorations(view: EditorView, isMouseSelecting: boolea
     // 收集所有需要显示源码的行号
     const activeLineNumbers = new Set<number>();
     
-    // 鼠标拖拽中时，不激活任何行（全部隐藏 tokens）
-    if (!isMouseSelecting) {
-      for (const range of selection.ranges) {
-        // 光标所在行（即使没有选择）
-        const cursorLine = state.doc.lineAt(range.head).number;
-        activeLineNumbers.add(cursorLine);
-        
-        // 如果有选择，添加选择范围覆盖的所有行
-        if (range.from !== range.to) {
-          const fromLine = state.doc.lineAt(range.from).number;
-          const toLine = state.doc.lineAt(range.to).number;
-          for (let lineNum = fromLine; lineNum <= toLine; lineNum++) {
-            activeLineNumbers.add(lineNum);
-          }
+    // 始终根据当前选择计算激活行（鼠标拖拽时也保持）
+    for (const range of selection.ranges) {
+      // 光标所在行（即使没有选择）
+      const cursorLine = state.doc.lineAt(range.head).number;
+      activeLineNumbers.add(cursorLine);
+      
+      // 如果有选择，添加选择范围覆盖的所有行
+      if (range.from !== range.to) {
+        const fromLine = state.doc.lineAt(range.from).number;
+        const toLine = state.doc.lineAt(range.to).number;
+        for (let lineNum = fromLine; lineNum <= toLine; lineNum++) {
+          activeLineNumbers.add(lineNum);
         }
       }
     }
     
-    // 检查节点是否在激活行内
-    const isInActiveLine = (from: number, to: number) => {
-      const fromLine = state.doc.lineAt(from).number;
-      const toLine = state.doc.lineAt(to).number;
-      for (let lineNum = fromLine; lineNum <= toLine; lineNum++) {
-        if (activeLineNumbers.has(lineNum)) return true;
-      }
-      return false;
-    };
+    // isMouseSelecting 现在只用于控制悬挂标记的显示，不影响行内标记
+    void isMouseSelecting; // 标记为已使用，避免 lint 警告
     
-    // 遍历语法树，找到需要隐藏的语法标记
+    // 记录每行是否已添加悬挂标记（避免重复）
+    const lineHangingMarks = new Map<number, boolean>();
+    
+    // 遍历语法树，处理语法标记
     syntaxTree(state).iterate({
       enter: (node) => {
-        // 如果在激活行内，不隐藏（显示源码）
-        if (isInActiveLine(node.from, node.to)) return;
-        
         const nodeType = node.name;
         
-        if (nodeType === "HeaderMark" || 
-            nodeType === "EmphasisMark" || 
-            nodeType === "StrikethroughMark" || 
-            nodeType === "CodeMark") {
+        // 只处理特定的标记类型
+        if (nodeType !== "HeaderMark" && 
+            nodeType !== "EmphasisMark" && 
+            nodeType !== "StrikethroughMark" && 
+            nodeType !== "CodeMark" &&
+            nodeType !== "ListMark" &&
+            nodeType !== "QuoteMark") {
+          return;
+        }
+        
+        const lineNum = state.doc.lineAt(node.from).number;
+        const isActive = activeLineNumbers.has(lineNum);
+        const markText = state.doc.sliceString(node.from, node.to);
+        
+        // 行首标记（HeaderMark, ListMark, QuoteMark）- 使用悬挂布局
+        const isBlockMark = nodeType === "HeaderMark" || nodeType === "ListMark" || nodeType === "QuoteMark";
+        
+        if (isBlockMark) {
+          if (isActive) {
+            // 只在行首添加一次悬挂标记
+            if (!lineHangingMarks.has(lineNum)) {
+              lineHangingMarks.set(lineNum, true);
+              const line = state.doc.line(lineNum);
+              decorations.push(
+                Decoration.widget({
+                  widget: new HangingMarkWidget(markText),
+                  side: -1,
+                }).range(line.from)
+              );
+            }
+          }
+          // 行首标记始终隐藏原始文本
           createHiddenDecoration(state, node.from, node.to, decorations);
+        } else {
+          // 行内标记（EmphasisMark, StrikethroughMark, CodeMark）- 使用 max-width 动画
+          // 确保不跨行
+          if (node.from >= node.to) return;
+          const fromLine = state.doc.lineAt(node.from).number;
+          const toLine = state.doc.lineAt(node.to).number;
+          if (fromLine !== toLine) return;
+          const text = state.doc.sliceString(node.from, node.to);
+          if (text.includes('\n')) return;
+          
+          // 根据是否激活行，添加不同的 class
+          const className = isActive 
+            ? "cm-formatting-inline cm-formatting-inline-visible" 
+            : "cm-formatting-inline";
+          decorations.push(
+            Decoration.mark({ class: className }).range(node.from, node.to)
+          );
         }
       },
     });
     
-    return Decoration.set(decorations, true);
+    return Decoration.set(decorations.sort((a, b) => a.from - b.from), true);
   } catch (e) {
     console.error("Error creating live preview decorations:", e);
     return Decoration.none;
@@ -819,18 +918,15 @@ const livePreviewPlugin = ViewPlugin.fromClass(
       const currentLine = update.state.doc.lineAt(update.state.selection.main.head).number;
       const lineChanged = currentLine !== this.lastCursorLine;
       
-      // 检查是否有鼠标状态变化
-      const mouseStateChanged = update.transactions.some(tr => 
-        tr.effects.some(e => e.is(setMouseSelecting))
-      );
-      
       // 更新条件：
       // 1. 文档变化
-      // 2. 光标所在行变化
-      // 3. 选择范围变化（且不在拖拽中）
-      // 4. 鼠标状态变化
-      if (update.docChanged || lineChanged || mouseStateChanged || 
-          (update.selectionSet && !isMouseSelecting)) {
+      // 2. 光标所在行变化（且不在拖拽中，避免拖拽时频繁更新）
+      // 3. 鼠标松开时（mouseUp）
+      const shouldUpdate = update.docChanged || 
+        (lineChanged && !isMouseSelecting) ||
+        update.transactions.some(tr => tr.effects.some(e => e.is(setMouseSelecting) && !e.value));
+      
+      if (shouldUpdate) {
         this.decorations = createLivePreviewDecorations(update.view, isMouseSelecting);
         this.lastCursorLine = currentLine;
       }
@@ -863,6 +959,57 @@ const CALLOUT_COLORS: Record<string, string> = {
   summary: "blue",
 };
 
+// Callout type to emoji mapping
+const CALLOUT_ICONS: Record<string, string> = {
+  note: "📝",
+  abstract: "📄",
+  summary: "📄",
+  info: "ℹ️",
+  tip: "💡",
+  hint: "💡",
+  success: "✅",
+  check: "✅",
+  done: "✅",
+  question: "❓",
+  help: "❓",
+  faq: "❓",
+  warning: "⚠️",
+  caution: "⚠️",
+  attention: "⚠️",
+  danger: "🔴",
+  error: "❌",
+  failure: "❌",
+  fail: "❌",
+  missing: "❌",
+  bug: "🐛",
+  example: "📋",
+  quote: "💬",
+  cite: "💬",
+};
+
+// Callout Icon Widget - 在 callout 首行显示 emoji 图标
+class CalloutIconWidget extends WidgetType {
+  constructor(readonly icon: string) {
+    super();
+  }
+
+  eq(other: CalloutIconWidget) {
+    return other.icon === this.icon;
+  }
+
+  toDOM() {
+    const span = document.createElement("span");
+    span.className = "cm-callout-icon";
+    span.textContent = this.icon;
+    span.style.cssText = "margin-right: 6px; font-size: 1.1em;";
+    return span;
+  }
+
+  ignoreEvent() {
+    return true;
+  }
+}
+
 const calloutStateField = StateField.define<DecorationSet>({
   create(state) {
     return buildCalloutDecorations(state);
@@ -884,38 +1031,64 @@ function buildCalloutDecorations(state: EditorState): DecorationSet {
   let lineNo = 1;
   while (lineNo <= lineCount) {
     const line = doc.line(lineNo);
-    const match = line.text.match(/^>\s*\[!(\w+)\]/);
+    // Support both word types (note, tip) and emoji types (📝, 💡)
+    const match = line.text.match(/^>\s*\[!([^\]]+)\]/);
     if (!match) {
       lineNo++;
       continue;
     }
 
-    const type = match[1].toLowerCase();
-    const color = CALLOUT_COLORS[type] || "gray";
+    const rawType = match[1].trim();
+    const type = rawType.toLowerCase();
+    // For emoji types (non-word characters), default to blue; otherwise use predefined colors
+    const isEmojiType = !/^\w+$/.test(rawType);
+    const color = isEmojiType ? "blue" : (CALLOUT_COLORS[type] || "gray");
+    
+    // Get icon: use the emoji directly if it's an emoji type, otherwise lookup from CALLOUT_ICONS
+    const icon = isEmojiType ? rawType : (CALLOUT_ICONS[type] || "📝");
 
-    // 给当前行添加 callout 样式
-    decorations.push(
-      Decoration.line({ class: `callout callout-${color}` }).range(line.from)
-    );
+    // 收集这个 callout 块的所有行
+    const calloutLines: { from: number }[] = [{ from: line.from }];
 
     // 后续连续以 '>' 开头的行视为同一个 callout 的内容行
     let nextLineNo = lineNo + 1;
     while (nextLineNo <= lineCount) {
       const nextLine = doc.line(nextLineNo);
       if (/^>\s*/.test(nextLine.text) || nextLine.text.trim() === "") {
-        decorations.push(
-          Decoration.line({ class: `callout callout-${color}` }).range(nextLine.from)
-        );
+        calloutLines.push({ from: nextLine.from });
         nextLineNo++;
       } else {
         break;
       }
     }
 
+    // 给每行添加装饰，首行加 callout-first，末行加 callout-last
+    calloutLines.forEach((l, idx) => {
+      let cls = `callout callout-${color}`;
+      if (idx === 0) {
+        cls += " callout-first";
+        // 把 [!type] 替换成 emoji 图标
+        // 找到 [!type] 的位置并替换
+        const headerMatch = doc.line(lineNo).text.match(/^(>\s*)(\[![^\]]+\])(\s*)/);
+        if (headerMatch) {
+          const bracketStart = line.from + headerMatch[1].length;
+          const bracketEnd = bracketStart + headerMatch[2].length;
+          // 用 emoji 替换 [!type]
+          decorations.push(
+            Decoration.replace({
+              widget: new CalloutIconWidget(icon),
+            }).range(bracketStart, bracketEnd)
+          );
+        }
+      }
+      if (idx === calloutLines.length - 1) cls += " callout-last";
+      decorations.push(Decoration.line({ class: cls }).range(l.from));
+    });
+
     lineNo = nextLineNo;
   }
 
-  return Decoration.set(decorations, true);
+  return Decoration.set(decorations.sort((a, b) => a.from - b.from), true);
 }
 
 // Markdown 样式装饰
@@ -943,12 +1116,16 @@ const markdownStylePlugin = ViewPlugin.fromClass(
           
           if (nodeType === "ATXHeading1") {
             decorations.push(Decoration.mark({ class: "cm-header-1" }).range(node.from, node.to));
+            decorations.push(Decoration.line({ class: "cm-heading-line" }).range(node.from));
           } else if (nodeType === "ATXHeading2") {
             decorations.push(Decoration.mark({ class: "cm-header-2" }).range(node.from, node.to));
+            decorations.push(Decoration.line({ class: "cm-heading-line" }).range(node.from));
           } else if (nodeType === "ATXHeading3") {
             decorations.push(Decoration.mark({ class: "cm-header-3" }).range(node.from, node.to));
+            decorations.push(Decoration.line({ class: "cm-heading-line" }).range(node.from));
           } else if (nodeType === "ATXHeading4" || nodeType === "ATXHeading5" || nodeType === "ATXHeading6") {
             decorations.push(Decoration.mark({ class: "cm-header-4" }).range(node.from, node.to));
+            decorations.push(Decoration.line({ class: "cm-heading-line" }).range(node.from));
           } else if (nodeType === "StrongEmphasis") {
             decorations.push(Decoration.mark({ class: "cm-strong" }).range(node.from, node.to));
           } else if (nodeType === "Emphasis") {

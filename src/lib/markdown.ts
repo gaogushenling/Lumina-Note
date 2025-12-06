@@ -21,19 +21,32 @@ const calloutTypes: Record<string, { icon: string; color: string }> = {
 // Custom renderer for Obsidian-style callouts
 const renderer = new Renderer();
 
+// Check if a string is an emoji (or emoji sequence)
+function isEmoji(str: string): boolean {
+  const emojiRegex = /^(?:\p{Emoji_Presentation}|\p{Emoji}\uFE0F)(?:\u200D(?:\p{Emoji_Presentation}|\p{Emoji}\uFE0F))*$/u;
+  return emojiRegex.test(str);
+}
+
 renderer.blockquote = function (quote: string | { text: string }) {
   try {
     const text = typeof quote === "string" ? quote : (quote?.text || "");
     // Match Obsidian callout syntax: > [!type] Title
-    const calloutMatch = text.match(/^\s*\[!(\w+)\]\s*(.*)$/m);
+    // Support both word types (note, tip, etc.) and emoji types (📝, 💡, etc.)
+    const calloutMatch = text.match(/^\s*\[!([^\]]+)\]\s*(.*)$/m);
     
     if (calloutMatch) {
-      const type = calloutMatch[1].toLowerCase();
-      const title = calloutMatch[2] || type.charAt(0).toUpperCase() + type.slice(1);
-      const config = calloutTypes[type] || calloutTypes.note;
+      const rawType = calloutMatch[1].trim();
+      const type = rawType.toLowerCase();
+      const title = calloutMatch[2] || (isEmoji(rawType) ? "" : type.charAt(0).toUpperCase() + type.slice(1));
+      
+      // For emoji types, use the emoji as icon; otherwise use predefined config
+      const isEmojiType = isEmoji(rawType);
+      const config = isEmojiType 
+        ? { icon: rawType, color: "blue" }  // Default color for emoji types
+        : (calloutTypes[type] || calloutTypes.note);
       
       // Remove the callout header from content and parse remaining content
-      const content = text.replace(/^\s*\[!\w+\].*$/m, "").trim();
+      const content = text.replace(/^\s*\[![^\]]+\].*$/m, "").trim();
       
       return `
         <div class="callout callout-${type} callout-${config.color}">

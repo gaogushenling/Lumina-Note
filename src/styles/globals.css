@@ -380,6 +380,19 @@ body {
   border-left-width: 3px;
 }
 
+/* 第一行 callout 加顶部圆角 */
+.codemirror-wrapper .callout.callout-first {
+  border-top-left-radius: 0.5rem;
+  border-top-right-radius: 0.5rem;
+}
+
+/* 最后一行 callout 加底部圆角 */
+.codemirror-wrapper .callout.callout-last {
+  border-bottom-left-radius: 0.5rem;
+  border-bottom-right-radius: 0.5rem;
+}
+
+/* 相邻的 callou
 /* 相邻的 callout 行之间不增加额外间距，看起来像一个整体块 */
 .codemirror-wrapper .callout + .callout {
   margin-top: 0;

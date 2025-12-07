@@ -4,7 +4,7 @@
  * 支持卡片翻转、评分、进度显示
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   X, 
@@ -37,6 +37,9 @@ export const FlashcardReview: React.FC<FlashcardReviewProps> = ({
   
   const [isFlipped, setIsFlipped] = useState(false);
   const [clozeIndex] = useState(1);
+  const frontRef = useRef<HTMLDivElement | null>(null);
+  const backRef = useRef<HTMLDivElement | null>(null);
+  const [cardHeight, setCardHeight] = useState<number | null>(null);
 
   // 开始复习
   useEffect(() => {
@@ -51,6 +54,22 @@ export const FlashcardReview: React.FC<FlashcardReviewProps> = ({
   }, [currentSession?.currentIndex]);
 
   const currentCard = currentSession?.cards[currentSession.currentIndex];
+
+  // 根据正反面内容计算卡片高度，避免翻转时位置跳动
+  useEffect(() => {
+    // 等待内容渲染完成后再测量高度
+    const timer = setTimeout(() => {
+      const frontHeight = frontRef.current?.offsetHeight ?? 0;
+      const backHeight = backRef.current?.offsetHeight ?? 0;
+      const baseMinHeight = 300;
+      const maxHeight = Math.max(frontHeight, backHeight, baseMinHeight);
+      if (maxHeight > 0) {
+        setCardHeight(maxHeight);
+      }
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, [currentCard, isFlipped]);
 
   // 处理评分
   const handleRating = useCallback(async (rating: ReviewRating) => {
@@ -144,6 +163,7 @@ export const FlashcardReview: React.FC<FlashcardReviewProps> = ({
             style={{
               transformStyle: 'preserve-3d',
               transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
+              height: cardHeight ?? undefined,
             }}
           >
             {/* 正面 */}
@@ -154,6 +174,7 @@ export const FlashcardReview: React.FC<FlashcardReviewProps> = ({
                 "flex flex-col items-center justify-center"
               )}
               style={{ backfaceVisibility: 'hidden' }}
+              ref={frontRef}
             >
               <CardFront card={currentCard} clozeIndex={clozeIndex} />
               <div className="mt-8 text-sm text-muted-foreground">
@@ -172,6 +193,7 @@ export const FlashcardReview: React.FC<FlashcardReviewProps> = ({
                 backfaceVisibility: 'hidden',
                 transform: 'rotateY(180deg)',
               }}
+              ref={backRef}
             >
               <CardBack card={currentCard} clozeIndex={clozeIndex} />
             </div>
@@ -179,61 +201,69 @@ export const FlashcardReview: React.FC<FlashcardReviewProps> = ({
         </div>
       </div>
 
-      {/* 底部评分按钮 */}
-      <AnimatePresence>
-        {isFlipped && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            className="p-4 border-t"
-          >
-            <div className="flex justify-center gap-3">
-              <RatingButton
-                label="忘记"
-                sublabel={formatInterval(1)}
-                color="red"
-                onClick={() => handleRating(0)}
-                shortcut="1"
-              />
-              <RatingButton
-                label="困难"
-                sublabel={formatInterval(parseInt(nextReviews[1].split('-')[2]) - new Date().getDate())}
-                color="orange"
-                onClick={() => handleRating(1)}
-                shortcut="2"
-              />
-              <RatingButton
-                label="良好"
-                sublabel={formatInterval(parseInt(nextReviews[2].split('-')[2]) - new Date().getDate())}
-                color="green"
-                onClick={() => handleRating(2)}
-                shortcut="3"
-              />
-              <RatingButton
-                label="简单"
-                sublabel={formatInterval(parseInt(nextReviews[3].split('-')[2]) - new Date().getDate())}
-                color="blue"
-                onClick={() => handleRating(3)}
-                shortcut="4"
-              />
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* 跳过按钮 */}
-      {!isFlipped && (
-        <div className="p-4 border-t flex justify-center">
-          <button
-            onClick={skipCard}
-            className="flex items-center gap-2 px-4 py-2 text-muted-foreground hover:text-foreground"
-          >
-            <SkipForward className="w-4 h-4" />
-            跳过
-          </button>
+      {/* 底部操作区域：固定高度，避免卡片被顶上去 */}
+      <div className="border-t">
+        <div className="h-[96px] flex items-center justify-center">
+          <AnimatePresence mode="wait">
+            {isFlipped ? (
+              <motion.div
+                key="rating"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 20 }}
+                className="w-full p-4"
+              >
+                <div className="flex justify-center gap-3">
+                  <RatingButton
+                    label="忘记"
+                    sublabel={formatInterval(1)}
+                    color="red"
+                    onClick={() => handleRating(0)}
+                    shortcut="1"
+                  />
+                  <RatingButton
+                    label="困难"
+                    sublabel={formatInterval(parseInt(nextReviews[1].split('-')[2]) - new Date().getDate())}
+                    color="orange"
+                    onClick={() => handleRating(1)}
+                    shortcut="2"
+                  />
+                  <RatingButton
+                    label="良好"
+                    sublabel={formatInterval(parseInt(nextReviews[2].split('-')[2]) - new Date().getDate())}
+                    color="green"
+                    onClick={() => handleRating(2)}
+                    shortcut="3"
+                  />
+                  <RatingButton
+                    label="简单"
+                    sublabel={formatInterval(parseInt(nextReviews[3].split('-')[2]) - new Date().getDate())}
+                    color="blue"
+                    onClick={() => handleRating(3)}
+                    shortcut="4"
+                  />
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="skip"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+                className="p-4 flex justify-center"
+              >
+                <button
+                  onClick={skipCard}
+                  className="flex items-center gap-2 px-4 py-2 text-muted-foreground hover:text-foreground"
+                >
+                  <SkipForward className="w-4 h-4" />
+                  跳过
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
-      )}
+      </div>
     </div>
   );
 };

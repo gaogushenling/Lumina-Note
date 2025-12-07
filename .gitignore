@@ -91,3 +91,7 @@ android-build-*.log
 
 # 调试日志目录
 debug-logs/
+
+# 其他克隆的外部项目
+trae-agent/
+claude-code/

@@ -21,6 +21,26 @@
 
 <br/>
 
+## 📸 界面预览
+
+<p align="center">
+  <img src="docs/screenshots/ai-agent.png" alt="AI Agent" width="800" />
+  <br/>
+  <em>AI Agent - 深度搜索与笔记总结</em>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/knowledge-graph.png" alt="知识图谱" width="800" />
+  <br/>
+  <em>知识图谱 - 可视化笔记关联</em>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/editor-latex.png" alt="编辑器" width="800" />
+  <br/>
+  <em>编辑器 - LaTeX 公式与反向链接</em>
+</p>
+
 ---
 
 ## 🎯 核心特性

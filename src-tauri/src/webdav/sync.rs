@@ -294,7 +294,7 @@ impl SyncEngine {
                 }
                 SyncAction::DeleteLocal => {
                     // 本地优先：永远不删除本地文件，跳过此操作
-                    log::warn!("Skipping DeleteLocal for {} - local-first policy", item.path);
+                    eprintln!("[WebDAV] Skipping DeleteLocal for {} - local-first policy", item.path);
                     continue;
                 }
                 SyncAction::Conflict => {
@@ -450,7 +450,7 @@ impl SyncEngine {
     async fn execute_delete_local(&self, _item: &SyncPlanItem) -> Result<Option<FileRecord>, AppError> {
         // 本地优先：永远不删除本地文件
         // 如果用户想删除，应该手动删除
-        log::warn!("execute_delete_local called but disabled - local-first policy");
+        eprintln!("[WebDAV] execute_delete_local called but disabled - local-first policy");
         Ok(None)
     }
 

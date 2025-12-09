@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useFlashcardStore } from '../../stores/useFlashcardStore';
 import { cn } from '../../lib/utils';
+import { useLocaleStore } from '../../stores/useLocaleStore';
 import { Flashcard } from '../../types/flashcard';
 
 interface DeckListProps {
@@ -30,6 +31,7 @@ export const DeckList: React.FC<DeckListProps> = ({
   onCreateCard 
 }) => {
   const { getDecks, getDeckStats, getDueCards, getCardsByDeck, deleteDeck, deleteCard } = useFlashcardStore();
+  const { t } = useLocaleStore();
   const [expandedDecks, setExpandedDecks] = React.useState<Set<string>>(new Set());
   const [pendingDelete, setPendingDelete] = React.useState<{ type: 'deck' | 'card'; deckId: string; notePath?: string } | null>(null);
   const [isDeleting, setIsDeleting] = React.useState(false);
@@ -85,12 +87,12 @@ export const DeckList: React.FC<DeckListProps> = ({
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold flex items-center gap-2">
           <Layers className="w-5 h-5" />
-          闪卡牌组
+          {t.flashcard.decks}
         </h2>
         <button
           onClick={() => onCreateCard('Default')}
           className="p-2 hover:bg-muted rounded-lg"
-          title="创建卡片"
+          title={t.flashcard.createCard}
         >
           <Plus className="w-5 h-5" />
         </button>
@@ -114,9 +116,9 @@ export const DeckList: React.FC<DeckListProps> = ({
                 <Brain className="w-5 h-5 text-primary" />
               </div>
               <div className="text-left">
-                <div className="font-medium">开始复习</div>
+                <div className="font-medium">{t.flashcard.startReview}</div>
                 <div className="text-sm text-muted-foreground">
-                  {allDueCount} 张卡片待复习
+                  {t.flashcard.cardsToReview.replace('{count}', String(allDueCount))}
                 </div>
               </div>
             </div>
@@ -130,8 +132,8 @@ export const DeckList: React.FC<DeckListProps> = ({
         {decks.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             <Sparkles className="w-12 h-12 mx-auto mb-3 opacity-50" />
-            <p>还没有闪卡</p>
-            <p className="text-sm">让 AI 帮你从笔记生成卡片吧</p>
+            <p>{t.flashcard.noCards}</p>
+            <p className="text-sm">{t.flashcard.letAiGenerate}</p>
           </div>
         ) : (
           decks.map(deck => (
@@ -146,6 +148,7 @@ export const DeckList: React.FC<DeckListProps> = ({
               onDeleteCard={(notePath) => requestDeleteCard(deck.id, notePath)}
               expanded={expandedDecks.has(deck.id)}
               onToggleExpanded={() => toggleExpanded(deck.id)}
+              t={t}
             />
           ))
         )}
@@ -156,24 +159,24 @@ export const DeckList: React.FC<DeckListProps> = ({
           <div className="bg-card border rounded-xl p-5 w-full max-w-sm shadow-xl space-y-3">
             <div className="font-semibold text-base">
               {pendingDelete.type === 'deck'
-                ? `确定删除牌组「${pendingDelete.deckId}」以及其中的所有卡片吗？`
-                : '确定删除这张卡片吗？'}
+                ? t.flashcard.confirmDeleteDeck.replace('{name}', pendingDelete.deckId)
+                : t.flashcard.confirmDeleteCard}
             </div>
-            <p className="text-sm text-muted-foreground">删除后无法恢复。</p>
+            <p className="text-sm text-muted-foreground">{t.flashcard.cannotRecover}</p>
             <div className="flex justify-end gap-2">
               <button
                 onClick={cancelDelete}
                 className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground"
                 disabled={isDeleting}
               >
-                取消
+                {t.common.cancel}
               </button>
               <button
                 onClick={confirmDelete}
                 disabled={isDeleting}
                 className="px-3 py-2 text-sm bg-destructive text-destructive-foreground rounded-lg disabled:opacity-50"
               >
-                {isDeleting ? '删除中...' : '删除'}
+                {isDeleting ? t.flashcard.deleting : t.common.delete}
               </button>
             </div>
           </div>
@@ -195,6 +198,7 @@ interface DeckCardProps {
   onDeleteCard: (notePath: string) => void;
   expanded: boolean;
   onToggleExpanded: () => void;
+  t: any;
 }
 
 const DeckCard: React.FC<DeckCardProps> = ({ 
@@ -207,6 +211,7 @@ const DeckCard: React.FC<DeckCardProps> = ({
   onDeleteCard,
   expanded,
   onToggleExpanded,
+  t,
 }) => {
   const hasDue = stats.due > 0 || stats.new > 0;
 
@@ -231,19 +236,19 @@ const DeckCard: React.FC<DeckCardProps> = ({
             <StatBadge
               icon={<Sparkles className="w-3 h-3" />}
               value={stats.new}
-              label="新"
+              label={t.flashcard.new}
               color="blue"
             />
             <StatBadge
               icon={<Clock className="w-3 h-3" />}
               value={stats.due}
-              label="待复习"
+              label={t.flashcard.due}
               color="orange"
             />
             <StatBadge
               icon={<Brain className="w-3 h-3" />}
               value={stats.learning}
-              label="学习中"
+              label={t.flashcard.learning}
               color="green"
             />
           </div>
@@ -254,7 +259,7 @@ const DeckCard: React.FC<DeckCardProps> = ({
           <button
             onClick={onToggleExpanded}
             className="p-2 hover:bg-muted rounded-lg"
-            title={expanded ? "收起卡片" : "展开卡片"}
+            title={expanded ? t.flashcard.collapseCards : t.flashcard.expandCards}
           >
             {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </button>
@@ -263,7 +268,7 @@ const DeckCard: React.FC<DeckCardProps> = ({
             <button
               onClick={onStartReview}
               className="p-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg"
-              title="开始复习"
+              title={t.flashcard.startReview}
             >
               <Play className="w-4 h-4" />
             </button>
@@ -271,14 +276,14 @@ const DeckCard: React.FC<DeckCardProps> = ({
           <button
             onClick={onCreateCard}
             className="p-2 hover:bg-muted rounded-lg"
-            title="添加卡片"
+            title={t.flashcard.addCard}
           >
             <Plus className="w-4 h-4" />
           </button>
           <button
             onClick={onDeleteDeck}
             className="p-2 hover:bg-muted rounded-lg text-destructive"
-            title="删除牌组（会删除该组所有卡片）"
+            title={t.flashcard.deleteDeck}
           >
             <Trash2 className="w-4 h-4" />
           </button>
@@ -297,7 +302,7 @@ const DeckCard: React.FC<DeckCardProps> = ({
               <button
                 onClick={() => onDeleteCard(card.notePath)}
                 className="p-1 hover:bg-muted rounded text-destructive"
-                title="删除这张卡片"
+                title={t.flashcard.deleteCard}
               >
                 <Trash2 className="w-4 h-4" />
               </button>
@@ -308,7 +313,7 @@ const DeckCard: React.FC<DeckCardProps> = ({
 
       {expanded && cards.length === 0 && (
         <div className="mt-3 text-sm text-muted-foreground">
-          暂无卡片
+          {t.flashcard.noCardsInDeck}
         </div>
       )}
     </div>

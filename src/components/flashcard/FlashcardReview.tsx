@@ -13,6 +13,7 @@ import {
   SkipForward
 } from 'lucide-react';
 import { useFlashcardStore } from '../../stores/useFlashcardStore';
+import { useLocaleStore } from '../../stores/useLocaleStore';
 import { ReviewRating, Flashcard } from '../../types/flashcard';
 import { previewNextReview, formatInterval } from '../../lib/sm2';
 import { renderClozeFront, renderClozeBack } from '../../lib/flashcard';
@@ -34,6 +35,7 @@ export const FlashcardReview: React.FC<FlashcardReviewProps> = ({
     skipCard, 
     endReview 
   } = useFlashcardStore();
+  const { t } = useLocaleStore();
   
   const [isFlipped, setIsFlipped] = useState(false);
   const [clozeIndex] = useState(1);
@@ -102,18 +104,18 @@ export const FlashcardReview: React.FC<FlashcardReviewProps> = ({
     return (
       <div className="flex flex-col items-center justify-center h-full p-8">
         <Brain className="w-16 h-16 text-primary/50 mb-4" />
-        <h2 className="text-xl font-semibold mb-2">复习完成！</h2>
+        <h2 className="text-xl font-semibold mb-2">{t.flashcard.reviewComplete}</h2>
         {currentSession && (
           <div className="text-muted-foreground mb-4">
-            已复习 {currentSession.reviewed} 张卡片，
-            正确率 {Math.round((currentSession.correct / currentSession.reviewed) * 100)}%
+            {t.flashcard.reviewedCards.replace('{count}', String(currentSession.reviewed))}，
+            {t.flashcard.accuracy.replace('{percent}', String(Math.round((currentSession.correct / currentSession.reviewed) * 100)))}
           </div>
         )}
         <button
           onClick={onClose || endReview}
           className="px-4 py-2 bg-primary text-primary-foreground rounded-lg"
         >
-          返回
+          {t.flashcard.back}
         </button>
       </div>
     );
@@ -176,9 +178,9 @@ export const FlashcardReview: React.FC<FlashcardReviewProps> = ({
               style={{ backfaceVisibility: 'hidden' }}
               ref={frontRef}
             >
-              <CardFront card={currentCard} clozeIndex={clozeIndex} />
+              <CardFront card={currentCard} clozeIndex={clozeIndex} t={t} />
               <div className="mt-8 text-sm text-muted-foreground">
-                点击或按空格翻转
+                {t.flashcard.clickOrSpaceToFlip}
               </div>
             </div>
 
@@ -195,7 +197,7 @@ export const FlashcardReview: React.FC<FlashcardReviewProps> = ({
               }}
               ref={backRef}
             >
-              <CardBack card={currentCard} clozeIndex={clozeIndex} />
+              <CardBack card={currentCard} clozeIndex={clozeIndex} t={t} />
             </div>
           </motion.div>
         </div>
@@ -215,28 +217,28 @@ export const FlashcardReview: React.FC<FlashcardReviewProps> = ({
               >
                 <div className="flex justify-center gap-3">
                   <RatingButton
-                    label="忘记"
+                    label={t.flashcard.forget}
                     sublabel={formatInterval(1)}
                     color="red"
                     onClick={() => handleRating(0)}
                     shortcut="1"
                   />
                   <RatingButton
-                    label="困难"
+                    label={t.flashcard.hard}
                     sublabel={formatInterval(parseInt(nextReviews[1].split('-')[2]) - new Date().getDate())}
                     color="orange"
                     onClick={() => handleRating(1)}
                     shortcut="2"
                   />
                   <RatingButton
-                    label="良好"
+                    label={t.flashcard.good}
                     sublabel={formatInterval(parseInt(nextReviews[2].split('-')[2]) - new Date().getDate())}
                     color="green"
                     onClick={() => handleRating(2)}
                     shortcut="3"
                   />
                   <RatingButton
-                    label="简单"
+                    label={t.flashcard.easy}
                     sublabel={formatInterval(parseInt(nextReviews[3].split('-')[2]) - new Date().getDate())}
                     color="blue"
                     onClick={() => handleRating(3)}
@@ -257,7 +259,7 @@ export const FlashcardReview: React.FC<FlashcardReviewProps> = ({
                   className="flex items-center gap-2 px-4 py-2 text-muted-foreground hover:text-foreground"
                 >
                   <SkipForward className="w-4 h-4" />
-                  跳过
+                  {t.flashcard.skip}
                 </button>
               </motion.div>
             )}
@@ -271,9 +273,10 @@ export const FlashcardReview: React.FC<FlashcardReviewProps> = ({
 // ==================== 子组件 ====================
 
 /** 卡片正面 */
-const CardFront: React.FC<{ card: Flashcard; clozeIndex: number }> = ({ 
+const CardFront: React.FC<{ card: Flashcard; clozeIndex: number; t: any }> = ({ 
   card, 
-  clozeIndex 
+  clozeIndex,
+  t 
 }) => {
   if (card.type === 'basic' || card.type === 'basic-reversed') {
     return (
@@ -314,7 +317,7 @@ const CardFront: React.FC<{ card: Flashcard; clozeIndex: number }> = ({
       <div className="text-xl text-center">
         {card.question}
         <div className="text-sm text-muted-foreground mt-2">
-          {card.ordered ? '请按顺序回忆' : '请列出所有项'}
+          {card.ordered ? t.flashcard.recallInOrder : t.flashcard.listAllItems}
         </div>
       </div>
     );
@@ -324,9 +327,10 @@ const CardFront: React.FC<{ card: Flashcard; clozeIndex: number }> = ({
 };
 
 /** 卡片背面 */
-const CardBack: React.FC<{ card: Flashcard; clozeIndex: number }> = ({ 
+const CardBack: React.FC<{ card: Flashcard; clozeIndex: number; t: any }> = ({ 
   card, 
-  clozeIndex 
+  clozeIndex,
+  t 
 }) => {
   if (card.type === 'basic' || card.type === 'basic-reversed') {
     return (

@@ -8,8 +8,10 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Minus, Square, X, Copy } from "lucide-react";
 import { useState, useEffect } from "react";
 import { platform } from "@tauri-apps/plugin-os";
+import { useLocaleStore } from "@/stores/useLocaleStore";
 
 export function TitleBar() {
+  const { t } = useLocaleStore();
   const [isMaximized, setIsMaximized] = useState(false);
   const [isMac, setIsMac] = useState(false);
 
@@ -123,7 +125,7 @@ export function TitleBar() {
         <button
           onClick={handleMinimize}
           className="h-full px-4 hover:bg-accent transition-colors flex items-center justify-center"
-          title="最小化"
+          title={t.titleBar.minimize}
         >
           <Minus size={14} className="text-muted-foreground" />
         </button>
@@ -132,7 +134,7 @@ export function TitleBar() {
         <button
           onClick={handleMaximize}
           className="h-full px-4 hover:bg-accent transition-colors flex items-center justify-center"
-          title={isMaximized ? "还原" : "最大化"}
+          title={isMaximized ? t.titleBar.restore : t.titleBar.maximize}
         >
           {isMaximized ? (
             <Copy size={12} className="text-muted-foreground" />
@@ -145,7 +147,7 @@ export function TitleBar() {
         <button
           onClick={handleClose}
           className="h-full px-4 hover:bg-red-500 hover:text-white transition-colors flex items-center justify-center"
-          title="关闭"
+          title={t.titleBar.close}
         >
           <X size={14} className="text-muted-foreground hover:text-white" />
         </button>

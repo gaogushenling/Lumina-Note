@@ -15,6 +15,7 @@ import {
 } from '@/lib/themePlugin';
 import { useUIStore } from '@/stores/useUIStore';
 import { useFileStore } from '@/stores/useFileStore';
+import { useLocaleStore } from '@/stores/useLocaleStore';
 
 interface ThemeEditorProps {
   isOpen: boolean;
@@ -23,26 +24,26 @@ interface ThemeEditorProps {
   onSave?: (theme: Theme) => void;
 }
 
-// 颜色分组配置
-const COLOR_GROUPS = [
+// 颜色分组配置 - will be localized dynamically
+const COLOR_GROUP_KEYS = [
   {
-    name: '基础 UI',
+    nameKey: 'baseUI',
     keys: ['background', 'foreground', 'muted', 'mutedForeground', 'accent', 'accentForeground', 'primary', 'primaryForeground', 'border']
   },
   {
-    name: 'Markdown 文本',
+    nameKey: 'markdownText',
     keys: ['heading', 'link', 'linkHover', 'bold', 'italic', 'blockquote', 'blockquoteBorder', 'listMarker', 'tag', 'highlight']
   },
   {
-    name: '代码',
+    nameKey: 'code',
     keys: ['code', 'codeBg', 'codeBlock', 'codeBlockBg']
   },
   {
-    name: '表格与分割',
+    nameKey: 'tableAndDivider',
     keys: ['hr', 'tableBorder', 'tableHeaderBg']
   },
   {
-    name: 'Diff 对比',
+    nameKey: 'diffCompare',
     keys: ['diffAddBg', 'diffAddText', 'diffRemoveBg', 'diffRemoveText']
   }
 ];
@@ -100,6 +101,7 @@ function buildHSL(h: number, s: number, l: number): string {
 export function ThemeEditor({ isOpen, onClose, editingTheme, onSave }: ThemeEditorProps) {
   const { isDarkMode } = useUIStore();
   const { vaultPath } = useFileStore();
+  const { t } = useLocaleStore();
   
   const [theme, setTheme] = useState<Theme>(() => 
     editingTheme || createThemeTemplate()
@@ -147,7 +149,7 @@ export function ThemeEditor({ isOpen, onClose, editingTheme, onSave }: ThemeEdit
   // 保存主题
   const handleSave = async () => {
     if (!vaultPath) {
-      alert('请先打开一个 Vault');
+      alert(t.themeEditor.openVaultFirst);
       return;
     }
     
@@ -156,7 +158,7 @@ export function ThemeEditor({ isOpen, onClose, editingTheme, onSave }: ThemeEdit
       onSave?.(theme);
       onClose();
     } else {
-      alert('保存失败');
+      alert(t.themeEditor.saveFailed);
     }
   };
 
@@ -164,7 +166,7 @@ export function ThemeEditor({ isOpen, onClose, editingTheme, onSave }: ThemeEdit
   const handleExport = () => {
     const json = exportTheme(theme);
     navigator.clipboard.writeText(json);
-    alert('主题 JSON 已复制到剪贴板');
+    alert(t.themeEditor.themeCopied);
   };
 
   // 下载主题文件
@@ -187,7 +189,7 @@ export function ThemeEditor({ isOpen, onClose, editingTheme, onSave }: ThemeEdit
       setShowImport(false);
       setImportText('');
     } else {
-      alert('无效的主题 JSON');
+      alert(t.themeEditor.invalidThemeJson);
     }
   };
 
@@ -211,14 +213,14 @@ export function ThemeEditor({ isOpen, onClose, editingTheme, onSave }: ThemeEdit
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <div className="flex items-center gap-3">
             <Palette className="w-5 h-5 text-primary" />
-            <span className="font-medium">主题编辑器</span>
+            <span className="font-medium">{t.themeEditor.title}</span>
           </div>
           <div className="flex items-center gap-2">
             {/* 预览模式切换 */}
             <button
               onClick={() => setPreviewMode(previewMode === 'light' ? 'dark' : 'light')}
               className="p-2 rounded hover:bg-accent transition-colors"
-              title={`切换到${previewMode === 'light' ? '暗色' : '亮色'}预览`}
+              title={previewMode === 'light' ? t.themeEditor.switchToDark : t.themeEditor.switchToLight}
             >
               {previewMode === 'light' ? <Moon size={16} /> : <Sun size={16} />}
             </button>
@@ -235,7 +237,7 @@ export function ThemeEditor({ isOpen, onClose, editingTheme, onSave }: ThemeEdit
             {/* 主题信息 */}
             <div className="space-y-3 mb-6">
               <div>
-                <label className="text-xs text-muted-foreground">主题名称</label>
+                <label className="text-xs text-muted-foreground">{t.themeEditor.themeName}</label>
                 <input
                   type="text"
                   value={theme.name}
@@ -244,7 +246,7 @@ export function ThemeEditor({ isOpen, onClose, editingTheme, onSave }: ThemeEdit
                 />
               </div>
               <div>
-                <label className="text-xs text-muted-foreground">描述</label>
+                <label className="text-xs text-muted-foreground">{t.themeEditor.description}</label>
                 <input
                   type="text"
                   value={theme.description}
@@ -256,10 +258,10 @@ export function ThemeEditor({ isOpen, onClose, editingTheme, onSave }: ThemeEdit
 
             {/* 颜色分组 */}
             <div className="space-y-1">
-              <div className="text-xs text-muted-foreground mb-2">颜色分组</div>
-              {COLOR_GROUPS.map((group, idx) => (
+              <div className="text-xs text-muted-foreground mb-2">{t.themeEditor.colorGroups}</div>
+              {COLOR_GROUP_KEYS.map((group, idx) => (
                 <button
-                  key={group.name}
+                  key={group.nameKey}
                   onClick={() => setActiveGroup(idx)}
                   className={`w-full text-left px-3 py-2 rounded text-sm transition-colors ${
                     activeGroup === idx
@@ -267,14 +269,14 @@ export function ThemeEditor({ isOpen, onClose, editingTheme, onSave }: ThemeEdit
                       : 'hover:bg-accent'
                   }`}
                 >
-                  {group.name}
+                  {t.themeEditor[group.nameKey as keyof typeof t.themeEditor] || group.nameKey}
                 </button>
               ))}
             </div>
 
             {/* 基于官方主题 */}
             <div className="mt-6">
-              <div className="text-xs text-muted-foreground mb-2">基于官方主题</div>
+              <div className="text-xs text-muted-foreground mb-2">{t.themeEditor.basedOnTheme}</div>
               <select
                 onChange={e => {
                   const base = OFFICIAL_THEMES.find(t => t.id === e.target.value);
@@ -282,7 +284,7 @@ export function ThemeEditor({ isOpen, onClose, editingTheme, onSave }: ThemeEdit
                 }}
                 className="w-full px-2 py-1.5 text-sm bg-muted border border-border rounded"
               >
-                <option value="">选择基础主题...</option>
+                <option value="">{t.themeEditor.selectBaseTheme}</option>
                 {OFFICIAL_THEMES.map(t => (
                   <option key={t.id} value={t.id}>{t.name}</option>
                 ))}
@@ -293,14 +295,14 @@ export function ThemeEditor({ isOpen, onClose, editingTheme, onSave }: ThemeEdit
           {/* 右侧：颜色编辑器 */}
           <div className="flex-1 p-4 overflow-y-auto">
             <div className="grid grid-cols-2 gap-4">
-              {COLOR_GROUPS[activeGroup].keys.map(key => {
+              {COLOR_GROUP_KEYS[activeGroup].keys.map(key => {
                 const colorKey = key as keyof ThemeColors;
                 const hsl = parseHSL(currentColors[colorKey]);
                 
                 return (
                   <div key={key} className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm">{COLOR_LABELS[key] || key}</span>
+                      <span className="text-sm">{t.themeEditor[key as keyof typeof t.themeEditor] || key}</span>
                       <div
                         className="w-6 h-6 rounded border border-border"
                         style={{ backgroundColor: hslToCSS(currentColors[colorKey]) }}
@@ -363,21 +365,21 @@ export function ThemeEditor({ isOpen, onClose, editingTheme, onSave }: ThemeEdit
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded hover:bg-accent transition-colors"
             >
               <Upload size={14} />
-              导入
+              {t.themeEditor.import}
             </button>
             <button
               onClick={handleExport}
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded hover:bg-accent transition-colors"
             >
               <Copy size={14} />
-              复制 JSON
+              {t.themeEditor.copyJson}
             </button>
             <button
               onClick={handleDownload}
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded hover:bg-accent transition-colors"
             >
               <Download size={14} />
-              下载
+              {t.themeEditor.download}
             </button>
           </div>
           
@@ -386,14 +388,14 @@ export function ThemeEditor({ isOpen, onClose, editingTheme, onSave }: ThemeEdit
               onClick={onClose}
               className="px-4 py-1.5 text-sm rounded hover:bg-accent transition-colors"
             >
-              取消
+              {t.themeEditor.cancel}
             </button>
             <button
               onClick={handleSave}
               className="flex items-center gap-1.5 px-4 py-1.5 text-sm bg-primary text-primary-foreground rounded hover:opacity-90 transition-opacity"
             >
               <Save size={14} />
-              保存到 Vault
+              {t.themeEditor.saveToVault}
             </button>
           </div>
         </div>
@@ -404,7 +406,7 @@ export function ThemeEditor({ isOpen, onClose, editingTheme, onSave }: ThemeEdit
             <textarea
               value={importText}
               onChange={e => setImportText(e.target.value)}
-              placeholder="粘贴主题 JSON..."
+              placeholder={t.themeEditor.pasteThemeJson}
               className="w-full h-32 p-2 text-sm bg-muted border border-border rounded resize-none"
             />
             <div className="flex justify-end gap-2 mt-2">
@@ -412,13 +414,13 @@ export function ThemeEditor({ isOpen, onClose, editingTheme, onSave }: ThemeEdit
                 onClick={() => setShowImport(false)}
                 className="px-3 py-1 text-sm rounded hover:bg-accent"
               >
-                取消
+                {t.themeEditor.cancel}
               </button>
               <button
                 onClick={handleImport}
                 className="px-3 py-1 text-sm bg-primary text-primary-foreground rounded"
               >
-                导入
+                {t.themeEditor.import}
               </button>
             </div>
           </div>

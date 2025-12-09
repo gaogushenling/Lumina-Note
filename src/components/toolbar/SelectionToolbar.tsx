@@ -7,13 +7,16 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { MessageSquarePlus, Video, Sparkles } from "lucide-react";
 import { useAIStore } from "@/stores/useAIStore";
 import { useFileStore } from "@/stores/useFileStore";
-import { callLLM, type Message } from "@/services/llm";
+import { callLLM } from '@/services/llm';
+import { cn } from '@/lib/utils';
+import { useLocaleStore } from '@/stores/useLocaleStore';
 
 interface SelectionToolbarProps {
   containerRef: React.RefObject<HTMLElement>;
 }
 
 export function SelectionToolbar({ containerRef }: SelectionToolbarProps) {
+  const { t } = useLocaleStore();
   const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
   const [selectedText, setSelectedText] = useState("");
   const [isSummarizing, setIsSummarizing] = useState(false);
@@ -388,7 +391,7 @@ ${text}
         <button
           onClick={handleAddToChat}
           className="flex items-center gap-1 px-1.5 py-0.5 text-[11px] font-medium text-foreground hover:bg-accent rounded transition-colors whitespace-nowrap"
-          title="添加到对话"
+          title={t.selectionToolbar.addToChat}
         >
           <MessageSquarePlus size={13} />
           <span>Add to Chat</span>
@@ -397,7 +400,7 @@ ${text}
           onClick={handleSummarize}
           disabled={isSummarizing}
           className="flex items-center gap-1 px-1.5 py-0.5 text-[11px] font-medium text-foreground hover:bg-accent rounded transition-colors whitespace-nowrap disabled:opacity-60 disabled:cursor-wait"
-          title="对选中文本生成总结并插入到下方"
+          title={t.selectionToolbar.selectionSummary}
         >
           <Sparkles size={13} className={isSummarizing ? "animate-spin" : ""} />
           <span>Summary</span>
@@ -406,7 +409,7 @@ ${text}
           onClick={handleTranslate}
           disabled={isTranslating}
           className="flex items-center gap-1 px-1.5 py-0.5 text-[11px] font-medium text-foreground hover:bg-accent rounded transition-colors whitespace-nowrap disabled:opacity-60 disabled:cursor-wait"
-          title="翻译选中的文本（中英互译）"
+          title={t.selectionToolbar.selectionTranslate}
         >
           <span className={isTranslating ? "animate-spin" : ""}>译</span>
           <span>Translate</span>
@@ -415,7 +418,7 @@ ${text}
           onClick={handlePolish}
           disabled={isPolishing}
           className="flex items-center gap-1 px-1.5 py-0.5 text-[11px] font-medium text-foreground hover:bg-accent rounded transition-colors whitespace-nowrap disabled:opacity-60 disabled:cursor-wait"
-          title="润色选中的文本"
+          title={t.selectionToolbar.selectionPolish}
         >
           <span className={isPolishing ? "animate-spin" : ""}>✎</span>
           <span>Polish</span>
@@ -424,7 +427,7 @@ ${text}
           onClick={handleTodo}
           disabled={isTodoing}
           className="flex items-center gap-1 px-1.5 py-0.5 text-[11px] font-medium text-foreground hover:bg-accent rounded transition-colors whitespace-nowrap disabled:opacity-60 disabled:cursor-wait"
-          title="从选中文本生成待办清单 (- [ ] ...)"
+          title={t.selectionToolbar.generateTodo}
         >
           <span className={isTodoing ? "animate-spin" : ""}>☑</span>
           <span>Todos</span>
@@ -432,7 +435,7 @@ ${text}
         <button
           onClick={handleOpenAsVideoNote}
           className="flex items-center gap-1 px-1.5 py-0.5 text-[11px] font-medium text-foreground hover:bg-accent rounded transition-colors whitespace-nowrap"
-          title="作为视频笔记打开（支持识别时间戳）"
+          title={t.selectionToolbar.videoNote}
         >
           <Video size={13} />
           <span>Video Note</span>

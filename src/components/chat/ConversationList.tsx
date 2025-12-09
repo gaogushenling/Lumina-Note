@@ -16,12 +16,14 @@ import {
   PanelLeftOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLocaleStore } from "@/stores/useLocaleStore";
 
 interface ConversationListProps {
   className?: string;
 }
 
 export function ConversationList({ className }: ConversationListProps) {
+  const { t } = useLocaleStore();
   const { chatMode } = useUIStore();
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -126,7 +128,7 @@ export function ConversationList({ className }: ConversationListProps) {
         <button
           onClick={() => setIsExpanded(!isExpanded)}
           className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-md transition-colors w-full flex justify-center"
-          title={isExpanded ? "收起列表" : "展开列表"}
+          title={isExpanded ? t.conversationList.collapseList : t.conversationList.expandList}
         >
           {isExpanded ? <PanelLeftClose size={18} /> : <PanelLeftOpen size={18} />}
         </button>
@@ -138,11 +140,11 @@ export function ConversationList({ className }: ConversationListProps) {
             "flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-all",
             isExpanded ? "w-full py-2 px-3" : "w-8 h-8 rounded-full"
           )}
-          title="新建对话"
+          title={t.conversationList.newConversation}
         >
           <Plus size={18} />
           {isExpanded && (
-            <span className="text-xs font-medium whitespace-nowrap">新建对话</span>
+            <span className="text-xs font-medium whitespace-nowrap">{t.conversationList.newConversation}</span>
           )}
         </button>
       </div>
@@ -200,7 +202,7 @@ export function ConversationList({ className }: ConversationListProps) {
                   <button
                     onClick={(e) => handleDeleteSession(e, session.id, session.type)}
                     className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive p-1 transition-opacity"
-                    title="删除对话"
+                    title={t.conversationList.deleteConversation}
                   >
                     <Trash2 size={12} />
                   </button>
@@ -213,7 +215,7 @@ export function ConversationList({ className }: ConversationListProps) {
         {allSessions.length === 0 && (
           <div className="px-2 py-4 text-center">
             {isExpanded ? (
-              <p className="text-xs text-muted-foreground">暂无对话</p>
+              <p className="text-xs text-muted-foreground">{t.conversationList.noConversations}</p>
             ) : (
               <MessageSquare size={16} className="mx-auto text-muted-foreground/50" />
             )}
@@ -240,7 +242,7 @@ export function ConversationList({ className }: ConversationListProps) {
             className="text-xs text-muted-foreground hover:text-foreground flex items-center justify-center gap-1 w-full py-1 rounded hover:bg-accent transition-colors"
           >
             <Trash2 size={12} />
-            清空历史
+            {t.conversationList.clearHistory}
           </button>
         </div>
       )}

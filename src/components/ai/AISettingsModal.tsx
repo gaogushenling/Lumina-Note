@@ -5,6 +5,7 @@ import { useRAGStore } from "@/stores/useRAGStore";
 import { useBrowserStore } from "@/stores/useBrowserStore";
 import { PROVIDER_REGISTRY, type LLMProviderType } from "@/services/llm";
 import { Settings, Tag, Loader2 } from "lucide-react";
+import { useLocaleStore } from "@/stores/useLocaleStore";
 
 interface AISettingsModalProps {
   isOpen: boolean;
@@ -24,6 +25,7 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
     lastError: ragError,
   } = useRAGStore();
   const { hideAllWebViews, showAllWebViews } = useBrowserStore();
+  const { t } = useLocaleStore();
 
   // 弹窗打开时隐藏 WebView，关闭时恢复
   useEffect(() => {
@@ -49,13 +51,13 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
         <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/60">
           <div className="flex items-center gap-2 text-sm font-medium">
             <Settings size={16} />
-            <span>AI 对话设置</span>
+            <span>{t.aiSettings.title}</span>
           </div>
           <button
             onClick={onClose}
             className="text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-muted transition-colors"
           >
-            关闭
+            {t.aiSettings.close}
           </button>
         </div>
 
@@ -63,7 +65,7 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
           {/* AI Provider Settings */}
           <div className="space-y-2">
             <div className="text-xs font-medium text-foreground flex items-center gap-2">
-              <span>🤖 主模型 (Main Model)</span>
+              <span>🤖 {t.aiSettings.mainModel}</span>
             </div>
             <div>
               <label className="text-xs text-muted-foreground block mb-1">服务商</label>
@@ -87,7 +89,7 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
 
             <div>
               <label className="text-xs text-muted-foreground block mb-1">
-                API Key {config.provider === "ollama" && <span className="text-muted-foreground">(可选)</span>}
+                {t.aiSettings.apiKey} {config.provider === "ollama" && <span className="text-muted-foreground">({t.aiSettings.apiKeyOptional})</span>}
               </label>
               <input
                 type="password"
@@ -95,7 +97,7 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
                 onChange={(e) => setConfig({ apiKey: e.target.value })}
                 placeholder={
                   config.provider === "ollama"
-                    ? "本地模型无需 API Key"
+                    ? t.aiSettings.localModelNoKey
                     : config.provider === "anthropic"
                       ? "sk-ant-..."
                       : "sk-..."
@@ -137,7 +139,7 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
                   type="text"
                   value={config.customModelId || ""}
                   onChange={(e) => setConfig({ customModelId: e.target.value })}
-                  placeholder="例如：deepseek-ai/DeepSeek-V3 或 Pro/ERNIE-4.0-Turbo-8K"
+                  placeholder={t.aiSettings.customModelHint}
                   className="w-full text-xs p-2 rounded border border-border bg-background"
                 />
               </div>
@@ -146,7 +148,7 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
             {config.model === "custom" && (
               <div>
                 <label className="text-xs text-muted-foreground block mb-1">
-                  Base URL <span className="text-muted-foreground">(可选，用于第三方代理)</span>
+                  {t.aiSettings.baseUrl} <span className="text-muted-foreground">({t.aiSettings.baseUrlOptional})</span>
                 </label>
                 <input
                   type="text"
@@ -160,7 +162,7 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
 
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="text-xs text-muted-foreground">温度 (Temperature)</label>
+                <label className="text-xs text-muted-foreground">{t.aiSettings.temperature}</label>
                 <span className="text-xs text-muted-foreground">{config.temperature ?? 0.3}</span>
               </div>
               <input
@@ -498,7 +500,7 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
 
           {/* Agent 设置 */}
           <div className="space-y-2 pt-3 border-t border-border">
-            <div className="text-xs font-medium text-foreground">🤖 Agent 设置</div>
+            <div className="text-xs font-medium text-foreground">🤖 {t.aiSettings.agentSettings}</div>
             <label className="flex items-center gap-2 text-xs text-foreground cursor-pointer">
               <input
                 type="checkbox"
@@ -506,8 +508,8 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
                 onChange={(e) => setAutoApprove(e.target.checked)}
                 className="w-3 h-3 rounded border-border"
               />
-              自动批准工具调用
-              <span className="text-muted-foreground">(无需手动确认)</span>
+              {t.aiSettings.autoApproveTools}
+              <span className="text-muted-foreground">({t.aiSettings.noManualConfirm})</span>
             </label>
           </div>
 

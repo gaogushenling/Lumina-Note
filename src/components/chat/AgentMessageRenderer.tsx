@@ -9,6 +9,7 @@
 
 import { useState, useMemo, memo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useLocaleStore } from '@/stores/useLocaleStore';
 import { parseMarkdown } from "@/lib/markdown";
 import { Message } from "@/agent/types";
 import { useTimeout } from "@/hooks/useTimeout";
@@ -282,11 +283,13 @@ const ProcessStepsBlock = memo(function ProcessStepsBlock({
   toolCalls,
   totalSteps,
   isCurrentRound,
+  t,
 }: {
   thinkingBlocks: ThinkingBlock[];
   toolCalls: ToolCallInfo[];
   totalSteps: number;
   isCurrentRound: boolean;  // 是否是当前执行中的轮次
+  t: any;
 }) {
   const [manualExpanded, setManualExpanded] = useState(false);
 
@@ -317,10 +320,10 @@ const ProcessStepsBlock = memo(function ProcessStepsBlock({
         isExpanded && (
           <div className="px-3 pb-1.5 space-y-px">
             {thinkingBlocks.map((thinking, i) => (
-              <ThinkingCollapsible key={`thinking-${i}`} thinking={thinking} />
+              <ThinkingCollapsible key={`thinking-${i}`} thinking={thinking} t={t} />
             ))}
             {toolCalls.map((tool, i) => (
-              <ToolCallCollapsible key={`tool-${i}`} tool={tool} />
+              <ToolCallCollapsible key={`tool-${i}`} tool={tool} t={t} />
             ))}
           </div>
         )
@@ -337,10 +340,10 @@ const ProcessStepsBlock = memo(function ProcessStepsBlock({
             >
               <div className="px-3 pb-1.5 space-y-px">
                 {thinkingBlocks.map((thinking, i) => (
-                  <ThinkingCollapsible key={`thinking-${i}`} thinking={thinking} />
+                  <ThinkingCollapsible key={`thinking-${i}`} thinking={thinking} t={t} />
                 ))}
                 {toolCalls.map((tool, i) => (
-                  <ToolCallCollapsible key={`tool-${i}`} tool={tool} />
+                  <ToolCallCollapsible key={`tool-${i}`} tool={tool} t={t} />
                 ))}
               </div>
             </motion.div>
@@ -354,7 +357,7 @@ const ProcessStepsBlock = memo(function ProcessStepsBlock({
 /**
  * 思考块折叠组件
  */
-const ThinkingCollapsible = memo(function ThinkingCollapsible({ thinking }: { thinking: ThinkingBlock }) {
+const ThinkingCollapsible = memo(function ThinkingCollapsible({ thinking, t }: { thinking: ThinkingBlock, t: any }) {
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -365,7 +368,7 @@ const ThinkingCollapsible = memo(function ThinkingCollapsible({ thinking }: { th
       >
         {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
         <Brain size={12} />
-        <span>思考中...</span>
+        <span>{t.agentMessage.thinking}</span>
       </button>
       <AnimatePresence>
         {expanded && (
@@ -388,7 +391,7 @@ const ThinkingCollapsible = memo(function ThinkingCollapsible({ thinking }: { th
 /**
  * 工具调用折叠卡片
  */
-const ToolCallCollapsible = memo(function ToolCallCollapsible({ tool }: { tool: ToolCallInfo }) {
+const ToolCallCollapsible = memo(function ToolCallCollapsible({ tool, t }: { tool: ToolCallInfo, t: any }) {
   const [expanded, setExpanded] = useState(false);
   const isComplete = tool.result !== undefined;
   const summary = getToolSummary(tool.name, tool.params, tool.result);
@@ -429,7 +432,7 @@ const ToolCallCollapsible = memo(function ToolCallCollapsible({ tool }: { tool: 
             <div className="pl-5 py-1 space-y-1 border-l border-muted-foreground/20 ml-1.5">
               {tool.params && (
                 <div>
-                  <div className="text-[10px] text-muted-foreground/50 mb-0.5">参数:</div>
+                  <div className="text-[10px] text-muted-foreground/50 mb-0.5">{t.agentMessage.params}:</div>
                   <pre className="text-[10px] bg-muted/30 p-1.5 rounded overflow-x-auto">
                     {tool.params}
                   </pre>
@@ -437,7 +440,7 @@ const ToolCallCollapsible = memo(function ToolCallCollapsible({ tool }: { tool: 
               )}
               {tool.result && (
                 <div>
-                  <div className="text-[10px] text-muted-foreground/50 mb-0.5">结果:</div>
+                  <div className="text-[10px] text-muted-foreground/50 mb-0.5">{t.agentMessage.result}:</div>
                   <pre className="text-[10px] bg-muted/30 p-1.5 rounded overflow-x-auto max-h-32 overflow-y-auto">
                     {tool.result}
                   </pre>
@@ -488,6 +491,8 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
 
   // 收集所有工具结果
   const toolResults = useMemo(() => collectToolResults(messages), [messages]);
+
+  const { t } = useLocaleStore();
 
   // 按轮次分组计算数据（只计算数据，不创建 JSX）
   const rounds = useMemo(() => {
@@ -594,6 +599,7 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
                       toolCalls={round.toolCalls}
                       totalSteps={totalSteps}
                       isCurrentRound={isCurrentRound}
+                      t={t}
                     />
                   )}
 

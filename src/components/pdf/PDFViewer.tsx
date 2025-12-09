@@ -11,7 +11,8 @@ import { usePDFStructure } from "@/hooks/usePDFStructure";
 import { useAIStore } from "@/stores/useAIStore";
 import { useUIStore } from "@/stores/useUIStore";
 import { cn } from "@/lib/utils";
-import { FileText, Loader2, Sparkles, ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, ListTree, Loader2, FileText } from 'lucide-react';
+import { useLocaleStore } from '@/stores/useLocaleStore';
 import { readFile } from "@tauri-apps/plugin-fs";
 
 interface PDFViewerProps {
@@ -27,6 +28,7 @@ export function PDFViewer({ filePath, className }: PDFViewerProps) {
   const [showOutline, setShowOutline] = useState(true);
   const [interactiveMode, setInteractiveMode] = useState(false);
   const { currentPage, scale, setCurrentPage, setScale } = usePDFStore();
+  const { t } = useLocaleStore();
   
   // 元素选择
   const {
@@ -172,7 +174,7 @@ export function PDFViewer({ filePath, className }: PDFViewerProps) {
         </div>
         <div className="flex-1 flex items-center justify-center">
           <Loader2 className="animate-spin mr-2" />
-          <span>读取文件...</span>
+          <span>{t.pdfViewer.readingFile}</span>
         </div>
       </div>
     );
@@ -190,7 +192,7 @@ export function PDFViewer({ filePath, className }: PDFViewerProps) {
         </div>
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center text-destructive">
-            <p className="text-lg font-medium">PDF 加载失败</p>
+            <p className="text-lg font-medium">{t.pdfViewer.loadFailed}</p>
             <p className="text-sm text-muted-foreground mt-1">{error}</p>
           </div>
         </div>
@@ -218,10 +220,10 @@ export function PDFViewer({ filePath, className }: PDFViewerProps) {
                 ? "bg-primary text-primary-foreground"
                 : "hover:bg-accent"
             )}
-            title="元素识别模式"
+            title={t.pdfViewer.elementRecognition}
           >
-            <Sparkles size={12} />
-            <span>{interactiveMode ? "交互中" : "交互模式"}</span>
+            <ListTree size={16} />
+            <span>{interactiveMode ? t.pdfViewer.interacting : t.pdfViewer.elementRecognition}</span>
           </button>
         </div>
       </div>
@@ -248,11 +250,11 @@ export function PDFViewer({ filePath, className }: PDFViewerProps) {
           <div className="flex flex-col w-64 border-r border-border bg-muted/30">
             {/* 头部 */}
             <div className="flex items-center justify-between px-3 py-2 border-b border-border">
-              <span className="text-sm font-medium">目录</span>
+              <span className="text-sm font-medium">{t.pdfViewer.catalog}</span>
               <button
                 onClick={() => setShowOutline(false)}
                 className="p-1 text-muted-foreground hover:text-foreground hover:bg-accent rounded"
-                title="收起目录"
+                title={t.pdfViewer.collapseCatalog}
               >
                 <ChevronLeft size={14} />
               </button>

@@ -18,6 +18,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { Globe, Bookmark, Share2, AlertCircle, PanelLeftOpen, PanelRightOpen } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
+import { useLocaleStore } from '@/stores/useLocaleStore';
 import { AddressBar } from './AddressBar';
 import { useFileStore } from '@/stores/useFileStore';
 import { useBrowserStore } from '@/stores/useBrowserStore';
@@ -49,6 +50,7 @@ export function BrowserView({
     setActiveTab,
     globalHidden,
   } = useBrowserStore();
+  const { t } = useLocaleStore();
   
   // 状态 - 使用 tabId 作为 key 来跟踪当前标签页的状态
   const [currentUrl, setCurrentUrl] = useState(initialUrl || '');
@@ -81,9 +83,9 @@ export function BrowserView({
     const updateVisibility = async () => {
       try {
         await invoke('set_browser_webview_visible', { tabId, visible: isActive });
-        console.log('[Browser] WebView 可见性更新:', tabId, isActive);
+        console.log('[Browser] WebView visibility updated:', tabId, isActive);
       } catch (err) {
-        console.error('[Browser] 更新 WebView 可见性失败:', err);
+        console.error('[Browser] Failed to update WebView visibility:', err);
       }
     };
     
@@ -95,7 +97,7 @@ export function BrowserView({
     return () => {
       // 组件卸载时隐藏当前 WebView
       invoke('set_browser_webview_visible', { tabId, visible: false }).catch(err => {
-        console.error('[Browser] 卸载时隐藏 WebView 失败:', err);
+        console.error('[Browser] Failed to hide WebView on unmount:', err);
       });
     };
   }, [tabId]);
@@ -112,9 +114,9 @@ export function BrowserView({
         // 隐藏旧的 WebView
         try {
           await invoke('set_browser_webview_visible', { tabId: prevTabId, visible: false });
-          console.log('[Browser] 隐藏旧 WebView:', prevTabId);
+          console.log('[Browser] Hiding old WebView:', prevTabId);
         } catch (err) {
-          console.error('[Browser] 隐藏旧 WebView 失败:', err);
+          console.error('[Browser] Failed to hide old WebView:', err);
         }
         
         // 重置组件状态，准备显示新标签页
@@ -141,10 +143,10 @@ export function BrowserView({
                 height: rect.height,
               });
             }
-            console.log('[Browser] 显示已存在的 WebView:', tabId);
+            console.log('[Browser] Showing existing WebView:', tabId);
           }
         } catch (err) {
-          console.error('[Browser] 检查 WebView 失败:', err);
+          console.error('[Browser] Failed to check WebView:', err);
           setWebviewCreated(false);
         }
       }
@@ -161,7 +163,7 @@ export function BrowserView({
     
     // 确保容器已渲染
     if (!containerRef.current) {
-      console.warn('[Browser] 容器未准备好，延迟创建 WebView');
+      console.warn('[Browser] Container not ready, delaying WebView creation');
       setTimeout(() => createWebview(url), 100);
       return;
     }
@@ -174,7 +176,7 @@ export function BrowserView({
       
       // 确保容器有有效尺寸
       if (rect.width <= 0 || rect.height <= 0) {
-        console.warn('[Browser] 容器尺寸无效，延迟创建 WebView');
+        console.warn('[Browser] Container size invalid, delaying WebView creation');
         setTimeout(() => createWebview(url), 100);
         return;
       }
@@ -192,7 +194,7 @@ export function BrowserView({
           width: rect.width,
           height: rect.height,
         });
-        console.log('[Browser] WebView 创建成功:', tabId, url);
+        console.log('[Browser] WebView created successfully:', tabId, url);
       } else {
         // WebView 已存在，显示并更新位置
         await invoke('set_browser_webview_visible', { tabId, visible: true });
@@ -203,7 +205,7 @@ export function BrowserView({
           width: rect.width,
           height: rect.height,
         });
-        console.log('[Browser] WebView 已存在，显示并更新位置:', tabId);
+        console.log('[Browser] WebView exists, showing and updating position:', tabId);
       }
       
       setWebviewCreated(true);
@@ -235,7 +237,7 @@ export function BrowserView({
         // URL 解析失败
       }
     } catch (err) {
-      console.error('[Browser] WebView 创建失败:', err);
+      console.error('[Browser] WebView creation failed:', err);
       setError(String(err));
     } finally {
       setIsLoading(false);
@@ -258,7 +260,7 @@ export function BrowserView({
         height: rect.height,
       });
     } catch (err) {
-      console.error('[Browser] 更新 WebView 位置失败:', err);
+      console.error('[Browser] Failed to update WebView position:', err);
     }
   }, [tabId, webviewCreated]);
 
@@ -268,7 +270,7 @@ export function BrowserView({
   useEffect(() => {
     if (prevGlobalHiddenRef.current && !globalHidden && isActive && webviewCreated) {
       // globalHidden 从 true 变为 false，需要更新位置
-      console.log('[Browser] 模态框关闭，更新 WebView 位置:', tabId);
+      console.log('[Browser] Modal closed, updating WebView position:', tabId);
       updateWebviewBounds();
     }
     prevGlobalHiddenRef.current = globalHidden;
@@ -302,7 +304,7 @@ export function BrowserView({
         // URL 解析失败
       }
     } catch (err) {
-      console.error('[Browser] 导航失败:', err);
+      console.error('[Browser] Navigation failed:', err);
       setError(String(err));
     } finally {
       setIsLoading(false);
@@ -315,7 +317,7 @@ export function BrowserView({
     try {
       await invoke('browser_webview_go_back', { tabId });
     } catch (err) {
-      console.error('[Browser] 后退失败:', err);
+      console.error('[Browser] Back failed:', err);
     }
   }, [tabId, webviewCreated]);
   
@@ -325,7 +327,7 @@ export function BrowserView({
     try {
       await invoke('browser_webview_go_forward', { tabId });
     } catch (err) {
-      console.error('[Browser] 前进失败:', err);
+      console.error('[Browser] Forward failed:', err);
     }
   }, [tabId, webviewCreated]);
   
@@ -335,7 +337,7 @@ export function BrowserView({
       setIsLoading(true);
       await invoke('browser_webview_reload', { tabId });
     } catch (err) {
-      console.error('[Browser] 刷新失败:', err);
+      console.error('[Browser] Refresh failed:', err);
     } finally {
       setTimeout(() => setIsLoading(false), 500);
     }
@@ -404,19 +406,19 @@ export function BrowserView({
         <button
           onClick={() => useUIStore.getState().toggleLeftSidebar()}
           className="p-1 rounded hover:bg-accent transition-colors text-muted-foreground hover:text-foreground shrink-0"
-          title="切换左侧面板"
+          title={t.browser.toggleLeftPanel}
         >
           <PanelLeftOpen size={12} />
         </button>
         <button
           className="p-1 rounded hover:bg-accent transition-colors text-muted-foreground hover:text-foreground shrink-0"
-          title="添加书签"
+          title={t.browser.addBookmark}
         >
           <Bookmark size={12} />
         </button>
         <button
           className="p-1 rounded hover:bg-accent transition-colors text-muted-foreground hover:text-foreground shrink-0"
-          title="分享"
+          title={t.browser.share}
         >
           <Share2 size={12} />
         </button>
@@ -451,13 +453,13 @@ export function BrowserView({
         ))}
         <div className="flex-1" />
         <span className="text-xs text-muted-foreground shrink-0">
-          {isLoading ? '加载中...' : ''}
+          {isLoading ? t.common.loading : ''}
         </span>
         {/* 切换右侧侧边栏按钮 */}
         <button
           onClick={() => useUIStore.getState().toggleRightSidebar()}
           className="p-1 rounded hover:bg-accent transition-colors text-muted-foreground hover:text-foreground shrink-0"
-          title="切换右侧面板"
+          title={t.browser.toggleRightPanel}
         >
           <PanelRightOpen size={14} />
         </button>
@@ -473,13 +475,13 @@ export function BrowserView({
           <div className="absolute inset-0 flex items-center justify-center bg-background z-10">
             <div className="text-center p-8">
               <AlertCircle className="w-16 h-16 mx-auto text-red-500 mb-4" />
-              <h3 className="text-lg font-medium mb-2">加载出错</h3>
+              <h3 className="text-lg font-medium mb-2">{t.browser.loadError}</h3>
               <p className="text-sm text-muted-foreground mb-4">{error}</p>
               <button
                 onClick={() => handleNavigate(currentUrl)}
                 className="px-4 py-2 bg-primary text-primary-foreground rounded-lg"
               >
-                重试
+                {t.browser.retry}
               </button>
             </div>
           </div>
@@ -490,9 +492,9 @@ export function BrowserView({
           <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-b from-background to-muted/20 z-5">
             <div className="text-center p-8 max-w-md">
               <Globe className="w-20 h-20 mx-auto text-muted-foreground/50 mb-6" />
-              <h2 className="text-xl font-medium mb-2">开始浏览</h2>
+              <h2 className="text-xl font-medium mb-2">{t.browser.startBrowsing}</h2>
               <p className="text-sm text-muted-foreground mb-6">
-                在地址栏输入网址或搜索关键词
+                {t.browser.enterUrlOrSearch}
               </p>
               
               {/* 快捷入口 */}
@@ -540,7 +542,7 @@ export function BrowserView({
         {/* 状态指示 */}
         {webviewCreated && !error && currentUrl && (
           <div className="absolute bottom-2 right-2 px-2 py-1 bg-green-500/20 text-green-600 text-xs rounded opacity-0 hover:opacity-100 transition-opacity z-10">
-            ✓ 已加载
+            ✓ {t.browser.loaded}
           </div>
         )}
       </div>

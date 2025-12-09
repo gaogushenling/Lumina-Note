@@ -37,6 +37,7 @@ import {
 } from '@/types/videoNote';
 import { readFile } from '@/lib/tauri';
 import { useFileStore } from '@/stores/useFileStore';
+import { useLocaleStore } from '@/stores/useLocaleStore';
 import { saveFile } from '@/lib/tauri';
 import { invoke } from '@tauri-apps/api/core';
 
@@ -56,6 +57,7 @@ export function VideoNoteView({
   isActive = true,
 }: VideoNoteViewProps) {
   const { vaultPath } = useFileStore();
+  const { t } = useLocaleStore();
   
   // 使用传入的 initialUrl
   const effectiveUrl = initialUrl;
@@ -108,19 +110,19 @@ export function VideoNoteView({
         height: rect.height
       });
       setWebviewCreated(true);
-      console.log('[VideoNote] WebView 创建成功');
+      console.log('[VideoNote] WebView created successfully');
       
       // 延迟启用自动填充（等待 B站页面加载）
       setTimeout(async () => {
         try {
           await invoke('setup_danmaku_autofill', { prefix: danmakuPrefix });
-          console.log('[VideoNote] 弹幕自动填充已启用');
+          console.log('[VideoNote] Danmaku autofill enabled');
         } catch (e) {
-          console.error('[VideoNote] 启用自动填充失败:', e);
+          console.error('[VideoNote] Failed to enable autofill:', e);
         }
       }, 3000);
     } catch (error) {
-      console.error('[VideoNote] WebView 创建失败:', error);
+      console.error('[VideoNote] Failed to create WebView:', error);
       // 失败时可以 fallback 到 iframe
     }
   }, [noteFile, danmakuPrefix]);
@@ -140,7 +142,7 @@ export function VideoNoteView({
         height: rect.height
       });
     } catch (error) {
-      console.error('[VideoNote] 更新 WebView 大小失败:', error);
+      console.error('[VideoNote] Failed to update WebView bounds:', error);
     }
   }, [webviewCreated]);
 
@@ -199,9 +201,9 @@ export function VideoNoteView({
         const notePath = getVideoNoteFilePath(vaultPath, noteFile.video.bvid);
         const mdContent = videoNoteToMarkdown(noteFile);
         await saveFile(notePath, mdContent);
-        console.log(`[VideoNote] 自动保存: ${notePath}`);
+        console.log(`[VideoNote] Auto saved: ${notePath}`);
       } catch (error) {
-        console.error('[VideoNote] 自动保存失败:', error);
+        console.error('[VideoNote] Auto save failed:', error);
       }
     };
     
@@ -219,7 +221,7 @@ export function VideoNoteView({
       // 1. 获取视频 CID
       const cid = await getVideoCid(noteFile.video.bvid);
       if (!cid) {
-        alert('获取视频信息失败');
+        alert(t.videoNote.getVideoInfoFailed);
         return;
       }
       
@@ -237,7 +239,7 @@ export function VideoNoteView({
       if (noteDanmakus.length === 0) {
         // 显示更详细的信息
         const recentDanmakus = allDanmakus.slice(-5).map(d => `"${d.content}"`).join(', ');
-        alert(`未找到以 "${danmakuPrefix}" 开头的弹幕\n\n共获取到 ${allDanmakus.length} 条弹幕\n最近5条: ${recentDanmakus || '无'}\n\n提示：\n1. B站弹幕有几分钟延迟\n2. 发送格式: ${danmakuPrefix}你的笔记`);
+        alert(`${t.videoNote.noDanmakuFound.replace('{prefix}', danmakuPrefix)}\n\n${t.videoNote.danmakuTotal.replace('{count}', String(allDanmakus.length))}\n${t.videoNote.recentDanmaku}: ${recentDanmakus || '-'}\n\n${t.videoNote.danmakuHint}: ${danmakuPrefix}...`);
         return;
       }
       
@@ -272,11 +274,11 @@ export function VideoNoteView({
         });
       }
       
-      alert(`同步完成！新增 ${addedCount} 条笔记`);
+      alert(t.videoNote.syncComplete.replace('{count}', String(addedCount)));
       
     } catch (error) {
       console.error('[Danmaku] Sync failed:', error);
-      alert('同步弹幕失败：' + error);
+      alert(t.videoNote.syncFailed + ': ' + error);
     } finally {
       setIsSyncingDanmaku(false);
     }
@@ -286,7 +288,7 @@ export function VideoNoteView({
   const handleLoadVideo = useCallback(async () => {
     const bvid = extractBvid(videoUrl);
     if (!bvid) {
-      alert('请输入有效的B站视频链接');
+      alert(t.videoNote.invalidUrl);
       return;
     }
     
@@ -315,7 +317,7 @@ export function VideoNoteView({
       setNoteFile(newNoteFile);
       setIsVideoLoaded(true);
     } catch (error) {
-      alert('加载视频失败：' + error);
+      alert(t.videoNote.loadFailed + ': ' + error);
     }
   }, [videoUrl, vaultPath]);
 
@@ -400,7 +402,7 @@ export function VideoNoteView({
 
   // 删除笔记
   const handleDeleteNote = useCallback((noteId: string) => {
-    if (!confirm('确定要删除这条笔记吗？')) return;
+    if (!confirm(t.videoNote.confirmDelete)) return;
     
     setNoteFile(prev => {
       if (!prev) return prev;
@@ -447,7 +449,7 @@ export function VideoNoteView({
       await invoke('seek_video_time', { seconds });
       console.log(`[VideoNote] 跳转到 ${formatTimestamp(seconds)}`);
     } catch (error) {
-      console.error('[VideoNote] 跳转失败:', error);
+      console.error('[VideoNote] Seek failed:', error);
     }
   }, []);
 
@@ -461,9 +463,9 @@ export function VideoNoteView({
     
     try {
       await saveFile(filePath, markdown);
-      alert(`已导出到：${fileName}`);
+      alert(`${t.videoNote.exportSuccess}: ${fileName}`);
     } catch (error) {
-      alert('导出失败：' + error);
+      alert(t.videoNote.exportFailed + ': ' + error);
     }
   }, [noteFile, vaultPath]);
 
@@ -475,7 +477,7 @@ export function VideoNoteView({
         <div className="flex items-center justify-between p-4 border-b border-border">
           <div className="flex items-center gap-2">
             <Video className="w-5 h-5 text-primary" />
-            <h2 className="font-semibold">视频笔记</h2>
+            <h2 className="font-semibold">{t.videoNote.title}</h2>
           </div>
           {onClose && (
             <button onClick={onClose} className="p-1 hover:bg-accent rounded">
@@ -489,9 +491,9 @@ export function VideoNoteView({
           <div className="w-full max-w-md space-y-4">
             <div className="text-center mb-6">
               <Video className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium">开始视频笔记</h3>
+              <h3 className="text-lg font-medium">{t.videoNote.startVideoNote}</h3>
               <p className="text-sm text-muted-foreground mt-1">
-                粘贴 B站视频链接，边看边记笔记
+                {t.videoNote.pasteVideoLink}
               </p>
             </div>
             
@@ -499,7 +501,7 @@ export function VideoNoteView({
               type="text"
               value={videoUrl}
               onChange={(e) => setVideoUrl(e.target.value)}
-              placeholder="粘贴B站视频链接，如 https://www.bilibili.com/video/BV..."
+              placeholder={t.videoNote.pasteVideoUrl}
               className="w-full px-4 py-3 bg-muted border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
               onKeyDown={(e) => e.key === 'Enter' && handleLoadVideo()}
             />
@@ -509,11 +511,11 @@ export function VideoNoteView({
               disabled={!videoUrl.trim()}
               className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              开始笔记
+              {t.videoNote.startNote}
             </button>
             
             <p className="text-xs text-center text-muted-foreground">
-              支持 bilibili.com 和 b23.tv 链接
+              {t.videoNote.supportedLinks}
             </p>
           </div>
         </div>
@@ -534,14 +536,14 @@ export function VideoNoteView({
           <button
             onClick={() => window.open(noteFile?.video.url, '_blank')}
             className="p-1.5 hover:bg-accent rounded transition-colors"
-            title="在浏览器中打开"
+            title={t.videoNote.openInBrowser}
           >
             <ExternalLink className="w-4 h-4" />
           </button>
           <button
             onClick={handleExport}
             className="p-1.5 hover:bg-accent rounded transition-colors"
-            title="导出为 Markdown"
+            title={t.videoNote.exportMarkdown}
           >
             <Download className="w-4 h-4" />
           </button>
@@ -549,7 +551,7 @@ export function VideoNoteView({
             <button 
               onClick={onMinimize} 
               className="p-1.5 hover:bg-accent rounded transition-colors"
-              title="最小化（可通过左侧视频按钮恢复）"
+              title={t.videoNote.minimize}
             >
               <Minus className="w-4 h-4" />
             </button>
@@ -576,14 +578,14 @@ export function VideoNoteView({
               <div className="absolute inset-0 flex items-center justify-center text-white/60">
                 <div className="text-center">
                   <Video className="w-16 h-16 mx-auto mb-3 opacity-40 animate-pulse" />
-                  <p className="text-lg">正在加载 B站视频...</p>
-                  <p className="text-sm opacity-60 mt-1">首次加载可能需要几秒钟</p>
+                  <p className="text-lg">{t.videoNote.loading}</p>
+                  <p className="text-sm opacity-60 mt-1">{t.videoNote.loadingHint}</p>
                 </div>
               </div>
             )}
             {webviewCreated && (
               <div className="absolute bottom-2 right-2 px-2 py-1 bg-green-500/20 text-green-400 text-xs rounded">
-                ✓ WebView 已加载
+                ✓ {t.videoNote.webviewLoaded}
               </div>
             )}
           </div>
@@ -670,13 +672,13 @@ export function VideoNoteView({
               <button
                 onClick={() => setIsPlaying(!isPlaying)}
                 className={`p-2 rounded-lg transition-colors ${isPlaying ? 'bg-primary text-primary-foreground' : 'bg-muted hover:bg-accent'}`}
-                title={isPlaying ? '暂停计时' : '开始计时'}
+                title={isPlaying ? t.videoNote.pauseTimer : t.videoNote.startTimer}
               >
                 {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
               </button>
               
               <span className="text-sm text-muted-foreground">
-                {isPlaying ? '计时中' : '已暂停'}
+                {isPlaying ? t.videoNote.timing : t.videoNote.paused}
               </span>
               
               <div className="flex-1" />
@@ -687,13 +689,13 @@ export function VideoNoteView({
                 className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors"
               >
                 <Plus className="w-4 h-4" />
-                添加笔记
+                {t.videoNote.addNote}
               </button>
             </div>
             
             {/* 使用提示 */}
             <p className="mt-2 text-xs text-muted-foreground">
-              💡 <strong>弹幕笔记</strong>：在B站发弹幕 <code className="px-1 bg-orange-500/20 text-orange-600 rounded">{danmakuPrefix}你的笔记</code>，然后点「同步弹幕」
+              💡 <strong>{t.videoNote.danmakuTip}</strong>: <code className="px-1 bg-orange-500/20 text-orange-600 rounded">{danmakuPrefix}...</code>
             </p>
           </div>
         </div>
@@ -703,9 +705,9 @@ export function VideoNoteView({
           <div className="p-3 border-b border-border">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-medium text-sm">笔记时间线</h3>
+                <h3 className="font-medium text-sm">{t.videoNote.noteTimeline}</h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {noteFile?.notes.length || 0} 条笔记
+                  {t.videoNote.notesCount.replace('{count}', String(noteFile?.notes.length || 0))}
                 </p>
               </div>
               {/* 同步弹幕按钮 */}
@@ -715,12 +717,12 @@ export function VideoNoteView({
                 className="px-2 py-1 text-xs bg-orange-500/20 text-orange-600 hover:bg-orange-500/30 rounded transition-colors disabled:opacity-50"
                 title={`从B站同步以 "${danmakuPrefix}" 开头的弹幕`}
               >
-                {isSyncingDanmaku ? '同步中...' : '🎯 同步弹幕'}
+                {isSyncingDanmaku ? t.videoNote.syncing : `🎯 ${t.videoNote.syncDanmaku}`}
               </button>
             </div>
             {/* 弹幕前缀配置 */}
             <div className="flex items-center gap-2 mt-2 text-xs">
-              <span className="text-muted-foreground">前缀:</span>
+              <span className="text-muted-foreground">{t.videoNote.prefix}:</span>
               <input
                 type="text"
                 value={danmakuPrefix}
@@ -733,7 +735,7 @@ export function VideoNoteView({
                 className="px-2 py-1 bg-slate-500/20 text-slate-600 hover:bg-slate-500/30 rounded transition-colors"
                 title="自动填充前缀到弹幕输入框"
               >
-                📝 填充
+                📝 {t.videoNote.fillPrefix}
               </button>
             </div>
           </div>
@@ -749,7 +751,7 @@ export function VideoNoteView({
                 <textarea
                   value={newNoteContent}
                   onChange={(e) => setNewNoteContent(e.target.value)}
-                  placeholder="输入笔记内容..."
+                  placeholder={t.videoNote.enterNoteContent}
                   className="w-full h-20 p-2 text-sm bg-muted border border-border rounded resize-none focus:outline-none focus:ring-1 focus:ring-primary"
                   autoFocus
                 />
@@ -761,14 +763,14 @@ export function VideoNoteView({
                     }}
                     className="px-2 py-1 text-xs hover:bg-accent rounded"
                   >
-                    取消
+                    {t.common.cancel}
                   </button>
                   <button
                     onClick={handleAddNote}
                     disabled={!newNoteContent.trim()}
                     className="px-2 py-1 text-xs bg-primary text-primary-foreground rounded disabled:opacity-50"
                   >
-                    保存
+                    {t.common.save}
                   </button>
                 </div>
               </div>
@@ -845,8 +847,8 @@ export function VideoNoteView({
             {/* 空状态 */}
             {!showAddNote && (!noteFile?.notes.length) && (
               <div className="text-center text-muted-foreground text-sm py-8">
-                <p>暂无笔记</p>
-                <p className="text-xs mt-1">点击「添加笔记」开始记录</p>
+                <p>{t.videoNote.noNotes}</p>
+                <p className="text-xs mt-1">{t.videoNote.clickAddNote}</p>
               </div>
             )}
           </div>

@@ -8,6 +8,7 @@ import { useUIStore } from "@/stores/useUIStore";
 import { useAIStore } from "@/stores/useAIStore";
 import { useFileStore } from "@/stores/useFileStore";
 import { useAgentStore } from "@/stores/useAgentStore";
+import { useLocaleStore } from "@/stores/useLocaleStore";
 import { 
   Bot, 
   BrainCircuit, 
@@ -27,6 +28,7 @@ interface AIFloatingPanelProps {
 
 export function AIFloatingPanel({ ballPosition, onDock }: AIFloatingPanelProps) {
   const panelRef = useRef<HTMLDivElement>(null);
+  const { t } = useLocaleStore();
   const { chatMode, setChatMode, setFloatingPanelOpen } = useUIStore();
   const { 
     config, 
@@ -128,7 +130,7 @@ export function AIFloatingPanel({ ballPosition, onDock }: AIFloatingPanelProps) 
                   ? "bg-background text-primary shadow-sm"
                   : "text-muted-foreground hover:text-foreground"
               }`}
-              title="Agent 模式"
+              title={t.aiFloatingPanel.agentMode}
             >
               <Bot size={12} />
               Agent
@@ -140,35 +142,35 @@ export function AIFloatingPanel({ ballPosition, onDock }: AIFloatingPanelProps) 
                   ? "bg-background text-primary shadow-sm"
                   : "text-muted-foreground hover:text-foreground"
               }`}
-              title="对话模式"
+              title={t.aiFloatingPanel.chatMode}
             >
               <BrainCircuit size={12} />
-              对话
+              {t.ai.conversation}
             </button>
           </div>
           <span className="text-xs text-muted-foreground">
-            {config.apiKey ? "✓" : "未配置"}
+            {config.apiKey ? "✓" : t.aiFloatingPanel.notConfigured}
           </span>
         </div>
         <div className="flex gap-1">
           <button
             onClick={clearChat}
             className="p-1.5 text-muted-foreground hover:text-foreground transition-colors rounded hover:bg-muted"
-            title="清空对话"
+            title={t.aiFloatingPanel.clearChat}
           >
             <Trash2 size={14} />
           </button>
           <button
             onClick={() => setShowSettings(!showSettings)}
             className="p-1.5 text-muted-foreground hover:text-foreground transition-colors rounded hover:bg-muted"
-            title="设置"
+            title={t.aiFloatingPanel.settings}
           >
             <Settings size={14} />
           </button>
           <button
             onClick={onDock}
             className="p-1.5 text-muted-foreground hover:text-primary transition-colors rounded hover:bg-muted"
-            title="回归侧栏"
+            title={t.aiFloatingPanel.dockToSidebar}
           >
             <Dock size={14} />
           </button>
@@ -180,7 +182,7 @@ export function AIFloatingPanel({ ballPosition, onDock }: AIFloatingPanelProps) 
         <div className="p-3 border-b border-border bg-muted/30 space-y-2 max-h-48 overflow-y-auto">
           <div className="space-y-2">
             <div>
-              <label className="text-xs text-muted-foreground block mb-1">服务商</label>
+              <label className="text-xs text-muted-foreground block mb-1">{t.aiFloatingPanel.provider}</label>
               <select
                 value={config.provider}
                 onChange={(e) => {
@@ -209,7 +211,7 @@ export function AIFloatingPanel({ ballPosition, onDock }: AIFloatingPanelProps) 
               />
             </div>
             <div>
-              <label className="text-xs text-muted-foreground block mb-1">模型</label>
+              <label className="text-xs text-muted-foreground block mb-1">{t.aiFloatingPanel.model}</label>
               <select
                 value={PROVIDER_REGISTRY[config.provider as LLMProviderType]?.models.some(m => m.id === config.model) ? config.model : "custom"}
                 onChange={(e) => {
@@ -233,13 +235,13 @@ export function AIFloatingPanel({ ballPosition, onDock }: AIFloatingPanelProps) 
             {config.model === "custom" && (
               <div>
                 <label className="text-xs text-muted-foreground block mb-1">
-                  自定义模型 ID
+                  {t.aiFloatingPanel.customModelId}
                 </label>
                 <input
                   type="text"
                   value={config.customModelId || ""}
                   onChange={(e) => setConfig({ customModelId: e.target.value })}
-                  placeholder="例如：deepseek-ai/DeepSeek-V3"
+                  placeholder={t.aiFloatingPanel.customModelPlaceholder}
                   className="w-full text-xs p-2 rounded border border-border bg-background"
                 />
               </div>
@@ -247,7 +249,7 @@ export function AIFloatingPanel({ ballPosition, onDock }: AIFloatingPanelProps) 
             {/* 自定义 Base URL */}
             <div>
               <label className="text-xs text-muted-foreground block mb-1">
-                Base URL <span className="text-muted-foreground">(可选)</span>
+                {t.aiFloatingPanel.baseUrl} <span className="text-muted-foreground">({t.aiFloatingPanel.optional})</span>
               </label>
               <input
                 type="text"

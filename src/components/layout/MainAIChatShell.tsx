@@ -373,10 +373,10 @@ export function MainAIChatShell() {
               }`}
           >
             <History size={14} />
-            <span>历史对话</span>
+            <span>{t.ai.historyChats}</span>
           </button>
           <span className="ml-3 text-[11px] text-muted-foreground select-none">
-            本会话 Token：{chatMode === "agent" ? agentTotalTokens : chatTotalTokens}
+            {t.ai.sessionTokens}: {chatMode === "agent" ? agentTotalTokens : chatTotalTokens}
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -385,7 +385,7 @@ export function MainAIChatShell() {
             className="flex items-center gap-1.5 px-2 py-1 text-xs rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
           >
             <Plus size={14} />
-            <span>新建对话</span>
+            <span>{t.ai.newChat}</span>
           </button>
         </div>
       </div>
@@ -413,7 +413,7 @@ export function MainAIChatShell() {
               >
                 <div className="p-3 border-b border-border flex items-center justify-between">
                   <h3 className="text-xs font-medium text-muted-foreground">
-                    {chatMode === "agent" ? "Agent 对话" : "Chat 对话"}
+                    {chatMode === "agent" ? t.ai.agentChats : t.ai.chatChats}
                   </h3>
                   <button
                     onClick={() => setShowHistory(false)}
@@ -425,7 +425,7 @@ export function MainAIChatShell() {
                 <div className="flex-1 overflow-y-auto">
                   {sessions.length === 0 ? (
                     <div className="p-4 text-xs text-muted-foreground text-center">
-                      暂无历史对话
+                      {t.ai.noHistory}
                     </div>
                   ) : (
                     sessions.map((session) => (
@@ -583,11 +583,11 @@ export function MainAIChatShell() {
                     <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4">
                       <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 mb-2">
                         <AlertCircle className="w-4 h-4" />
-                        <span className="font-medium text-sm">需要审批</span>
+                        <span className="font-medium text-sm">{t.ai.needApproval}</span>
                       </div>
                       <div className="text-sm text-foreground mb-3">
                         <p className="mb-1">
-                          工具: <code className="px-1.5 py-0.5 bg-muted rounded text-xs">{pendingTool.name}</code>
+                          {t.ai.tool}: <code className="px-1.5 py-0.5 bg-muted rounded text-xs">{pendingTool.name}</code>
                         </p>
                         <pre className="mt-2 p-2 bg-muted rounded text-xs overflow-x-auto max-h-32">
                           {JSON.stringify(pendingTool.params, null, 2)}
@@ -599,14 +599,14 @@ export function MainAIChatShell() {
                           className="flex items-center gap-1 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg transition-colors"
                         >
                           <Check className="w-3 h-3" />
-                          批准
+                          {t.ai.approve}
                         </button>
                         <button
                           onClick={reject}
                           className="flex items-center gap-1 px-3 py-1.5 bg-muted hover:bg-muted/80 text-foreground text-sm rounded-lg transition-colors"
                         >
                           <X className="w-3 h-3" />
-                          拒绝
+                          {t.ai.reject}
                         </button>
                       </div>
                     </div>
@@ -687,7 +687,7 @@ export function MainAIChatShell() {
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder={chatMode === "agent" ? "我是Lumina，这个模式下我拥有许多强力装备，可以帮你处理各种事务！" : "我是Lumina，你有什么想和我聊聊的？我知无不言"}
+                    placeholder={chatMode === "agent" ? t.ai.agentInputPlaceholder : t.ai.chatInputPlaceholder}
                     className="w-full resize-none outline-none text-foreground placeholder:text-muted-foreground min-h-[40px] max-h-[200px] bg-transparent text-base leading-relaxed"
                     rows={1}
                     autoFocus
@@ -723,7 +723,7 @@ export function MainAIChatShell() {
                       <button
                         onClick={() => setShowFilePicker(!showFilePicker)}
                         className="flex items-center gap-1.5 p-1.5 px-2 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                        title="添加工作区文件"
+                        title={t.ai.addWorkspaceFile}
                       >
                         <Paperclip size={16} />
                       </button>
@@ -736,7 +736,7 @@ export function MainAIChatShell() {
                               type="text"
                               value={filePickerQuery}
                               onChange={(e) => setFilePickerQuery(e.target.value)}
-                              placeholder="搜索文件..."
+                              placeholder={t.ai.searchFile}
                               className="w-full px-2 py-1.5 text-sm bg-muted/50 border border-border rounded outline-none focus:ring-1 focus:ring-primary/50"
                               autoFocus
                             />
@@ -744,7 +744,7 @@ export function MainAIChatShell() {
                           <div className="max-h-60 overflow-y-auto">
                             {pickerFilteredFiles.length === 0 ? (
                               <div className="px-3 py-4 text-sm text-muted-foreground text-center">
-                                未找到文件
+                                {t.ai.fileNotFound}
                               </div>
                             ) : (
                               pickerFilteredFiles.map((file) => (
@@ -770,7 +770,7 @@ export function MainAIChatShell() {
                             )}
                           </div>
                           <div className="px-3 py-2 text-xs text-muted-foreground border-t border-border">
-                            共 {allFiles.filter(f => !f.isFolder).length} 个文件
+                            {t.ai.filesCount.replace('{count}', String(allFiles.filter(f => !f.isFolder).length))}
                           </div>
                         </div>
                       )}
@@ -780,7 +780,7 @@ export function MainAIChatShell() {
                     <div className="flex items-center bg-muted rounded-lg p-0.5">
                       <button
                         onClick={() => setChatMode("chat")}
-                        title="简单的对话模式，无法操作文件"
+                        title={t.ai.chatModeHint}
                         className={`px-3 py-1 text-xs font-medium rounded-md transition-all duration-200 ${chatMode === "chat"
                             ? "bg-background text-foreground shadow-sm"
                             : "text-muted-foreground hover:text-foreground"
@@ -793,7 +793,7 @@ export function MainAIChatShell() {
                       </button>
                       <button
                         onClick={() => setChatMode("agent")}
-                        title="智能助手模式，可以读写文件和执行任务"
+                        title={t.ai.agentModeHint}
                         className={`px-3 py-1 text-xs font-medium rounded-md transition-all duration-200 ${chatMode === "agent"
                             ? "bg-background text-foreground shadow-sm"
                             : "text-muted-foreground hover:text-foreground"
@@ -806,14 +806,14 @@ export function MainAIChatShell() {
                       </button>
                     </div>
                     <span className="ml-2 text-xs text-muted-foreground">
-                      {config.apiKey ? "✓" : "未配置"}
+                      {config.apiKey ? "✓" : t.ai.notConfigured}
                     </span>
 
                     {/* 设置按钮：紧挨着模式切换的小齿轮，打开 AI 对话设置 */}
                     <button
                       onClick={() => setShowSettings(true)}
                       className="ml-1 flex items-center justify-center p-1.5 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                      title="AI 对话设置"
+                      title={t.ai.aiChatSettings}
                     >
                       <Settings size={14} />
                     </button>
@@ -835,7 +835,7 @@ export function MainAIChatShell() {
                           ? "bg-red-500/20 text-red-500"
                           : "text-muted-foreground hover:bg-muted hover:text-foreground"
                         }`}
-                      title={isRecording ? "停止语音输入" : "开始语音输入"}
+                      title={isRecording ? t.ai.stopVoice : t.ai.startVoice}
                     >
                       {isRecording ? <MicOff size={16} /> : <Mic size={16} />}
                     </button>
@@ -868,7 +868,7 @@ export function MainAIChatShell() {
                       exit={{ height: 0, opacity: 0 }}
                       className="bg-muted/30 border-t border-border px-4 py-2.5 text-xs text-muted-foreground overflow-hidden"
                     >
-                      <span>从库中获取实时内容</span>
+                      <span>{t.ai.getRealtimeContent}</span>
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -883,7 +883,7 @@ export function MainAIChatShell() {
                     animate={{ opacity: 1, transition: { delay: 0.5 } }}
                     className="text-center text-xs text-muted-foreground mt-3"
                   >
-                    AI 生成的内容可能存在错误，请注意核实
+                    {t.ai.aiGeneratedWarning}
                   </motion.p>
                 )}
               </motion.div>
@@ -922,7 +922,7 @@ export function MainAIChatShell() {
         <button
           onClick={() => setShowDebug(!showDebug)}
           className="fixed bottom-4 right-4 z-50 w-10 h-10 rounded-full bg-orange-500 text-white flex items-center justify-center shadow-lg hover:bg-orange-600 transition-colors text-xs font-bold"
-          title="调试面板"
+          title={t.ai.debugPanel}
         >
           🐛
         </button>
@@ -935,10 +935,10 @@ export function MainAIChatShell() {
           return (
             <div className="fixed inset-4 z-50 bg-background/95 backdrop-blur border border-border rounded-xl shadow-2xl flex flex-col overflow-hidden">
               <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/50">
-                <h2 className="font-bold text-lg">🐛 Agent 调试面板</h2>
+                <h2 className="font-bold text-lg">🐛 {t.ai.agentDebugPanel}</h2>
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-muted-foreground">
-                    模式: {chatMode} | 状态: {agentStatus} | 完整消息数: {fullMessages.length} | 显示消息数: {agentMessages.length}
+                    {t.ai.mode}: {chatMode} | {t.ai.status}: {agentStatus} | {t.ai.fullMsgsCount}: {fullMessages.length} | {t.ai.displayMsgsCount}: {agentMessages.length}
                   </span>
                   <button
                     onClick={() => setShowDebug(false)}
@@ -953,7 +953,7 @@ export function MainAIChatShell() {
                 <div className="p-3 rounded-lg border bg-muted/30 border-border mb-4">
                   <div className="flex items-center justify-between mb-2">
                     <div className="font-bold text-muted-foreground flex items-center gap-2">
-                      <span>🔍 意图识别结果</span>
+                      <span>🔍 {t.ai.intentResult}</span>
                       {lastIntent && (
                         <span className={`px-1.5 py-0.5 rounded text-[10px] ${lastIntent.confidence > 0.8 ? 'bg-green-500/20 text-green-600' : 'bg-amber-500/20 text-amber-600'
                           }`}>
@@ -963,7 +963,7 @@ export function MainAIChatShell() {
                     </div>
                     {!lastIntent && (
                       <span className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded">
-                        未触发
+                        {t.ai.notTriggered}
                       </span>
                     )}
                   </div>
@@ -1026,7 +1026,7 @@ export function MainAIChatShell() {
                 ))}
                 {fullMessages.length === 0 && (
                   <div className="text-center text-muted-foreground py-8">
-                    暂无消息，发送一条消息开始调试
+                    {t.ai.noMsgs}
                   </div>
                 )}
               </div>

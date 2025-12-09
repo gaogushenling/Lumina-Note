@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useFileStore } from "@/stores/useFileStore";
+import { useLocaleStore } from "@/stores/useLocaleStore";
 import {
   ZoomIn,
   ZoomOut,
@@ -223,6 +224,7 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
   const edgesRef = useRef<GraphEdge[]>([]);
 
   const { fileTree, currentFile, openFile, openIsolatedGraphTab } = useFileStore();
+  const { t } = useLocaleStore();
 
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
   const [hoverNode, setHoverNode] = useState<string | null>(null);
@@ -853,7 +855,7 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
       )}>
         <div className="p-4 space-y-6">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold">图谱设置</h3>
+            <h3 className="text-sm font-semibold">{t.knowledgeGraph.settings}</h3>
             <button
               onClick={() => setShowSettings(false)}
               className="p-1 hover:bg-muted rounded"
@@ -864,11 +866,11 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
 
           {/* Physics */}
           <div className="space-y-4">
-            <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">物理引擎</h4>
+            <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t.knowledgeGraph.physics}</h4>
             
             <div className="space-y-2">
               <div className="flex justify-between text-xs">
-                <span>节点斥力</span>
+                <span>{t.knowledgeGraph.nodeRepulsion}</span>
                 <span className="text-muted-foreground">{params.repulsion}</span>
               </div>
               <input
@@ -884,7 +886,7 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
 
             <div className="space-y-2">
               <div className="flex justify-between text-xs">
-                <span>连线长度</span>
+                <span>{t.knowledgeGraph.linkLength}</span>
                 <span className="text-muted-foreground">{params.springLength}</span>
               </div>
               <input
@@ -900,7 +902,7 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
 
             <div className="space-y-2">
               <div className="flex justify-between text-xs">
-                <span>向心力</span>
+                <span>{t.knowledgeGraph.centerPull}</span>
                 <span className="text-muted-foreground">{params.centerPull.toFixed(3)}</span>
               </div>
               <input
@@ -917,11 +919,11 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
 
           {/* Visual */}
           <div className="space-y-4">
-            <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">视觉效果</h4>
+            <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t.knowledgeGraph.visual}</h4>
             
             <div className="space-y-2">
               <div className="flex justify-between text-xs">
-                <span>节点大小</span>
+                <span>{t.knowledgeGraph.nodeSize}</span>
                 <span className="text-muted-foreground">{nodeSize.toFixed(1)}x</span>
               </div>
               <input
@@ -942,7 +944,7 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
                 onChange={(e) => setShowLabels(e.target.checked)}
                 className="rounded border-border"
               />
-              <span>显示标签</span>
+              <span>{t.knowledgeGraph.showLabels}</span>
             </label>
           </div>
         </div>
@@ -959,12 +961,12 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
                 "p-1.5 rounded transition-colors",
                 showSettings ? "bg-primary/10 text-primary" : "hover:bg-muted text-muted-foreground"
               )}
-              title="图谱设置"
+              title={t.knowledgeGraph.settings}
             >
               <Settings size={16} />
             </button>
             <span className="text-xs text-muted-foreground">
-              {nodesRef.current.length} 节点 · {edgesRef.current.length} 连接
+              {nodesRef.current.length} {t.graph.nodes} · {edgesRef.current.length} {t.graph.edges}
             </span>
           </div>
           <div className="flex items-center gap-1">
@@ -986,7 +988,7 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
             <button
               onClick={buildGraph}
               className="p-1 hover:bg-muted rounded text-muted-foreground ml-1"
-              title="刷新图谱"
+              title={t.sidebar.refresh}
             >
               <RefreshCw size={14} />
             </button>
@@ -1032,7 +1034,7 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
                 <circle cx="12" cy="12" r="3" />
                 <path d="M12 2v4m0 12v4m10-10h-4M6 12H2" />
               </svg>
-              孤立查看
+              {t.knowledgeGraph.isolateView}
             </button>
             {!contextMenu.node.isFolder && (
               <button
@@ -1043,7 +1045,7 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
                 className="w-full px-3 py-1.5 text-sm text-left hover:bg-accent flex items-center gap-2"
               >
                 <FileText className="w-4 h-4" />
-                打开笔记
+                {t.knowledgeGraph.openNote}
               </button>
             )}
           </div>
@@ -1066,7 +1068,7 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
               <div className="space-y-1">
                 <div className="text-[10px] text-muted-foreground uppercase flex items-center gap-1">
                   <LinkIcon size={10} />
-                  关联笔记 ({connectedNodes.length})
+                  {t.knowledgeGraph.linkedNotes} ({connectedNodes.length})
                 </div>
                 <div className="flex flex-wrap gap-1">
                   {connectedNodes.slice(0, 8).map((node) => (
@@ -1097,7 +1099,7 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center text-muted-foreground">
               <MousePointer2 size={24} className="mx-auto mb-2 opacity-50" />
-              <p className="text-sm">暂无笔记</p>
+              <p className="text-sm">{t.knowledgeGraph.noLinkedNotes}</p>
             </div>
           </div>
         )}

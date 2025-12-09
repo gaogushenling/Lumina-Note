@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useFileStore } from "@/stores/useFileStore";
 import { useUIStore } from "@/stores/useUIStore";
 import { useBrowserStore } from "@/stores/useBrowserStore";
+import { useLocaleStore } from "@/stores/useLocaleStore";
 import { FileEntry } from "@/lib/tauri";
 import { cn, getFileName } from "@/lib/utils";
 import {
@@ -41,6 +42,7 @@ interface CommandPaletteProps {
 }
 
 export function CommandPalette({ isOpen, mode, onClose, onModeChange }: CommandPaletteProps) {
+  const { t } = useLocaleStore();
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -106,8 +108,8 @@ export function CommandPalette({ isOpen, mode, onClose, onModeChange }: CommandP
   const commands = useMemo<CommandItem[]>(() => [
     {
       id: "new-file",
-      label: "新建笔记",
-      description: "创建新的 Markdown 笔记",
+      label: t.commandPalette.newNote,
+      description: t.commandPalette.newNoteDesc,
       icon: <Plus size={16} />,
       shortcut: "Ctrl+N",
       action: () => {
@@ -117,16 +119,16 @@ export function CommandPalette({ isOpen, mode, onClose, onModeChange }: CommandP
     },
     {
       id: "quick-open",
-      label: "快速打开",
-      description: "搜索并打开笔记",
+      label: t.commandPalette.quickOpen,
+      description: t.commandPalette.quickOpenDesc,
       icon: <Search size={16} />,
       shortcut: "Ctrl+O",
       action: () => onModeChange("file"),
     },
     {
       id: "toggle-left-sidebar",
-      label: "切换左侧边栏",
-      description: "显示/隐藏文件树",
+      label: t.commandPalette.toggleLeftSidebar,
+      description: t.commandPalette.toggleLeftSidebarDesc,
       icon: <Sidebar size={16} />,
       action: () => {
         onClose();
@@ -135,8 +137,8 @@ export function CommandPalette({ isOpen, mode, onClose, onModeChange }: CommandP
     },
     {
       id: "toggle-right-sidebar",
-      label: "切换右侧边栏",
-      description: "显示/隐藏 AI 面板",
+      label: t.commandPalette.toggleRightSidebar,
+      description: t.commandPalette.toggleRightSidebarDesc,
       icon: <MessageSquare size={16} />,
       action: () => {
         onClose();
@@ -145,8 +147,8 @@ export function CommandPalette({ isOpen, mode, onClose, onModeChange }: CommandP
     },
     {
       id: "toggle-theme",
-      label: isDarkMode ? "切换到浅色模式" : "切换到深色模式",
-      description: "切换应用主题",
+      label: isDarkMode ? t.commandPalette.toggleToLight : t.commandPalette.toggleToDark,
+      description: t.commandPalette.toggleThemeDesc,
       icon: isDarkMode ? <Sun size={16} /> : <Moon size={16} />,
       action: () => {
         onClose();
@@ -155,8 +157,8 @@ export function CommandPalette({ isOpen, mode, onClose, onModeChange }: CommandP
     },
     {
       id: "show-graph",
-      label: isGraphOpen ? "切换到关系图谱" : "打开关系图谱",
-      description: "查看笔记之间的链接关系",
+      label: isGraphOpen ? t.commandPalette.switchToGraph : t.commandPalette.openGraph,
+      description: t.commandPalette.graphDesc,
       icon: <Network size={16} />,
       action: () => {
         onClose();
@@ -165,18 +167,18 @@ export function CommandPalette({ isOpen, mode, onClose, onModeChange }: CommandP
     },
     {
       id: "switch-workspace",
-      label: "切换工作空间",
-      description: `当前: ${vaultPath ? vaultPath.split(/[/\\]/).pop() : "未选择"}`,
+      label: t.commandPalette.switchWorkspace,
+      description: `${t.commandPalette.current}: ${vaultPath ? vaultPath.split(/[\/\\]/).pop() : t.commandPalette.notSelected}`,
       icon: <FolderOpen size={16} />,
       action: () => {
         onClose();
-        clearVault();  // 清除当前工作空间，回到欢迎页
+        clearVault();
       },
     },
     {
       id: "global-search",
-      label: "全局搜索",
-      description: "在所有笔记中搜索内容",
+      label: t.commandPalette.globalSearch,
+      description: t.commandPalette.globalSearchDesc,
       icon: <Search size={16} />,
       shortcut: "Ctrl+Shift+F",
       action: () => {
@@ -184,7 +186,7 @@ export function CommandPalette({ isOpen, mode, onClose, onModeChange }: CommandP
         window.dispatchEvent(new CustomEvent("open-global-search"));
       },
     },
-  ], [onClose, createNewFile, onModeChange, toggleLeftSidebar, toggleRightSidebar, toggleTheme, isDarkMode, openGraphTab, isGraphOpen, vaultPath]);
+  ], [t, onClose, createNewFile, onModeChange, toggleLeftSidebar, toggleRightSidebar, toggleTheme, isDarkMode, openGraphTab, isGraphOpen, vaultPath]);
 
   // Filter items based on query and mode
   const filteredItems = useMemo(() => {
@@ -270,10 +272,10 @@ export function CommandPalette({ isOpen, mode, onClose, onModeChange }: CommandP
   if (!isOpen) return null;
 
   const placeholder = mode === "command" 
-    ? "输入命令..." 
+    ? t.commandPalette.commandPlaceholder 
     : mode === "file"
-    ? "输入文件名搜索..."
-    : "搜索笔记内容...";
+    ? t.commandPalette.filePlaceholder
+    : t.commandPalette.searchPlaceholder;
 
   return (
     <>
@@ -309,7 +311,7 @@ export function CommandPalette({ isOpen, mode, onClose, onModeChange }: CommandP
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                命令
+                {t.commandPalette.commands}
               </button>
               <button
                 onClick={() => onModeChange("file")}
@@ -320,7 +322,7 @@ export function CommandPalette({ isOpen, mode, onClose, onModeChange }: CommandP
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                文件
+                {t.commandPalette.files}
               </button>
             </div>
           </div>
@@ -329,7 +331,7 @@ export function CommandPalette({ isOpen, mode, onClose, onModeChange }: CommandP
           <div ref={listRef} className="max-h-80 overflow-y-auto">
             {filteredItems.length === 0 ? (
               <div className="p-8 text-center text-muted-foreground text-sm">
-                没有找到匹配项
+                {t.commandPalette.noResults}
               </div>
             ) : (
               filteredItems.map((item, index) => {
@@ -394,16 +396,16 @@ export function CommandPalette({ isOpen, mode, onClose, onModeChange }: CommandP
           {/* Footer */}
           <div className="px-4 py-2 border-t border-border text-xs text-muted-foreground flex items-center gap-4">
             <span>
-              <kbd className="bg-muted px-1 rounded">↑↓</kbd> 选择
+              <kbd className="bg-muted px-1 rounded">↑↓</kbd> {t.commandPalette.select}
             </span>
             <span>
-              <kbd className="bg-muted px-1 rounded">Enter</kbd> 确认
+              <kbd className="bg-muted px-1 rounded">Enter</kbd> {t.commandPalette.confirm}
             </span>
             <span>
-              <kbd className="bg-muted px-1 rounded">Tab</kbd> 切换模式
+              <kbd className="bg-muted px-1 rounded">Tab</kbd> {t.commandPalette.switchMode}
             </span>
             <span>
-              <kbd className="bg-muted px-1 rounded">Esc</kbd> 关闭
+              <kbd className="bg-muted px-1 rounded">Esc</kbd> {t.commandPalette.close}
             </span>
           </div>
         </div>

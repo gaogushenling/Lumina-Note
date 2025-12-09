@@ -185,7 +185,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
     let messageToSend = value.trim();
     if (textSelections.length > 0) {
       const quotedTexts = textSelections.map(sel => 
-        `> 引用自 ${sel.source}:\n> ${sel.text.split('\n').join('\n> ')}`
+        `> ${t.ai.quoteFrom} ${sel.source}:\n> ${sel.text.split('\n').join('\n> ')}`
       ).join('\n\n');
       messageToSend = quotedTexts + (messageToSend ? `\n\n${messageToSend}` : '');
     }

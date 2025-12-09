@@ -2,9 +2,11 @@
  * Google Gemini Provider
  * 支持 Gemini 2.5 Flash/Pro 等模型
  * 支持多模态输入（图片）
+ * 通过 Tauri 后端发送请求
  */
 
 import type { Message, MessageContent, LLMConfig, LLMOptions, LLMResponse, LLMProvider } from "../types";
+import { llmFetchJson } from "../httpClient";
 
 // Gemini 消息部分的类型
 type GeminiPart = { text: string } | { inline_data: { mime_type: string; data: string } };
@@ -23,35 +25,27 @@ export class GeminiProvider implements LLMProvider {
     // 转换消息格式为 Gemini 格式
     const contents = this.convertMessages(messages);
 
-    const response = await fetch(
-      `${baseUrl}/models/${model}:generateContent?key=${this.config.apiKey}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+    const result = await llmFetchJson<{
+      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+      usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number; totalTokenCount?: number };
+    }>(`${baseUrl}/models/${model}:generateContent?key=${this.config.apiKey}`, {
+      method: "POST",
+      body: {
+        contents,
+        generationConfig: {
+          temperature: options?.temperature ?? 0.7,
+          maxOutputTokens: options?.maxTokens || 8192,
         },
-        body: JSON.stringify({
-          contents,
-          generationConfig: {
-            temperature: options?.temperature ?? 0.7,
-            maxOutputTokens: options?.maxTokens || 8192,
-          },
-        }),
-        signal: options?.signal,
-      }
-    );
+      },
+      timeout: 120,
+    });
 
-    if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`Gemini API 错误: ${error}`);
+    if (!result.ok || !result.data) {
+      throw new Error(`Gemini API 错误: ${result.error}`);
     }
 
-    const data = await response.json();
-    
-    // 提取响应内容
+    const data = result.data;
     const content = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-    
-    // 提取 usage 信息
     const usage = data.usageMetadata ? {
       promptTokens: data.usageMetadata.promptTokenCount || 0,
       completionTokens: data.usageMetadata.candidatesTokenCount || 0,
@@ -65,14 +59,14 @@ export class GeminiProvider implements LLMProvider {
    * 转换消息内容为 Gemini parts 格式
    */
   private convertContent(content: MessageContent): GeminiPart[] {
-    if (typeof content === 'string') {
+    if (typeof content === "string") {
       return [{ text: content }];
     }
     
     return content.map(item => {
-      if (item.type === 'text') {
+      if (item.type === "text") {
         return { text: item.text };
-      } else if (item.type === 'image') {
+      } else if (item.type === "image") {
         return {
           inline_data: {
             mime_type: item.source.mediaType,
@@ -80,17 +74,14 @@ export class GeminiProvider implements LLMProvider {
           }
         };
       }
-      return { text: '' };
+      return { text: "" };
     });
   }
 
   /**
    * 将标准消息格式转换为 Gemini 格式
    */
-  private convertMessages(messages: Message[]): Array<{
-    role: string;
-    parts: GeminiPart[];
-  }> {
+  private convertMessages(messages: Message[]): Array<{ role: string; parts: GeminiPart[] }> {
     const contents: Array<{ role: string; parts: GeminiPart[] }> = [];
     
     for (const msg of messages) {
@@ -99,7 +90,6 @@ export class GeminiProvider implements LLMProvider {
       if (msg.role === "assistant") {
         role = "model";
       } else if (msg.role === "system") {
-        // 系统消息作为用户消息的前缀处理
         role = "user";
       } else {
         role = "user";

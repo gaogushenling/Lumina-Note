@@ -292,7 +292,7 @@ export const slashCommandPlugin = ViewPlugin.fromClass(
       // 检测是否输入了 "/"
       if (update.docChanged && !update.state.field(slashMenuField).active) {
         for (const tr of update.transactions) {
-          tr.changes.iterChanges((fromA, toA, fromB, toB, inserted) => {
+          tr.changes.iterChanges((_fromA, _toA, fromB, toB, inserted) => {
             const text = inserted.toString();
             if (text === "/" && fromB === toB - 1) {
               // 检查是否在行首或空格后

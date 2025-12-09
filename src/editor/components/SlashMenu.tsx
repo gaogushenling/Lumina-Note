@@ -24,7 +24,7 @@ const categoryOrder = ["ai", "heading", "list", "block", "insert"];
 export function SlashMenu({ view }: SlashMenuProps) {
   const [visible, setVisible] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [slashPos, setSlashPos] = useState(0);
+  const [_slashPos, setSlashPos] = useState(0);
   const [filter, setFilter] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -110,14 +110,7 @@ export function SlashMenu({ view }: SlashMenuProps) {
     // 初始检查
     checkState();
 
-    // 订阅更新
-    const listener = EditorView.updateListener.of((update) => {
-      if (update.docChanged || update.selectionSet) {
-        checkState();
-      }
-    });
-
-    // 这里只能通过轮询来检查状态变化
+    // 通过轮询来检查状态变化
     const interval = setInterval(checkState, 50);
     return () => clearInterval(interval);
   }, [view, visible]);

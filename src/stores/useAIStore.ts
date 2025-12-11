@@ -63,7 +63,16 @@ function getTextFromContent(content: MessageContent): string {
     .join('\n');
 }
 
-function generateSessionTitleFromMessages(messages: Message[], fallback: string = "新对话"): string {
+function getNewConversationTitle(): string {
+  const t = getCurrentTranslations();
+  return t?.common?.newConversation ?? "New conversation";
+}
+
+function isDefaultConversationTitle(title: string, fallback: string): boolean {
+  return title === fallback || title === "新对话";
+}
+
+function generateSessionTitleFromMessages(messages: Message[], fallback: string = getNewConversationTitle()): string {
   const firstUser = messages.find((m) => m.role === "user");
   if (!firstUser || !firstUser.content) return fallback;
   const raw = getTextFromContent(firstUser.content).replace(/\s+/g, " ").trim();
@@ -72,7 +81,7 @@ function generateSessionTitleFromMessages(messages: Message[], fallback: string 
   return raw.length > maxLen ? `${raw.slice(0, maxLen)}...` : raw;
 }
 
-function generateTitleFromAssistantContent(content: string, fallback: string = "新对话"): string {
+function generateTitleFromAssistantContent(content: string, fallback: string = getNewConversationTitle()): string {
   if (!content) return fallback;
   // 去掉思维标签等包裹内容
   const cleaned = content
@@ -174,11 +183,12 @@ export const useAIStore = create<AIState>()(
   currentSessionId: null,
             // Session management
             createSession: (title) => {
+              const fallbackTitle = getNewConversationTitle();
               const createdAt = Date.now();
               const id = `chat-${createdAt}`;
               const session: ChatSession = {
                 id,
-                title: title || "新对话",
+                title: title || fallbackTitle,
                 createdAt,
                 updatedAt: createdAt,
                 messages: [],
@@ -318,7 +328,8 @@ export const useAIStore = create<AIState>()(
         set((state) => {
           // 使用 state.messages 而不是闭包中的 messages，确保获取最新状态
           const newMessages = [...state.messages, userMessage];
-          const newTitle = generateSessionTitleFromMessages(newMessages, "新对话");
+          const fallbackTitle = getNewConversationTitle();
+          const newTitle = generateSessionTitleFromMessages(newMessages, fallbackTitle);
           return {
             messages: newMessages,
             error: null,
@@ -326,7 +337,7 @@ export const useAIStore = create<AIState>()(
               s.id === state.currentSessionId
                 ? {
                     ...s,
-                    title: s.title === "新对话" ? newTitle : s.title,
+                    title: isDefaultConversationTitle(s.title, fallbackTitle) ? newTitle : s.title,
                     messages: newMessages,
                     updatedAt: Date.now(),
                   }
@@ -401,7 +412,8 @@ export const useAIStore = create<AIState>()(
           set((state) => {
             const assistantMessage: Message = { role: "assistant", content: response.content };
             const newMessages = [...state.messages, assistantMessage];
-            const newTitle = generateTitleFromAssistantContent(response.content, "新对话");
+            const fallbackTitle = getNewConversationTitle();
+            const newTitle = generateTitleFromAssistantContent(response.content, fallbackTitle);
             
             return {
               messages: newMessages,
@@ -413,7 +425,7 @@ export const useAIStore = create<AIState>()(
                 s.id === state.currentSessionId
                   ? {
                       ...s,
-                      title: s.title === "新对话" ? newTitle : s.title,
+                      title: isDefaultConversationTitle(s.title, fallbackTitle) ? newTitle : s.title,
                       messages: newMessages,
                       updatedAt: Date.now(),
                     }
@@ -505,7 +517,8 @@ export const useAIStore = create<AIState>()(
         set((state) => {
           // 使用 state.messages 而不是闭包中的 messages，确保获取最新状态
           const newMessages = [...state.messages, userMessage];
-          const newTitle = generateSessionTitleFromMessages(newMessages, "新对话");
+          const fallbackTitle = getNewConversationTitle();
+          const newTitle = generateSessionTitleFromMessages(newMessages, fallbackTitle);
           return {
             messages: newMessages,
             streamingContent: "",
@@ -515,7 +528,7 @@ export const useAIStore = create<AIState>()(
               s.id === state.currentSessionId
                 ? {
                     ...s,
-                    title: s.title === "新对话" ? newTitle : s.title,
+                    title: isDefaultConversationTitle(s.title, fallbackTitle) ? newTitle : s.title,
                     messages: newMessages,
                     updatedAt: Date.now(),
                   }
@@ -629,7 +642,8 @@ export const useAIStore = create<AIState>()(
           set((state) => {
             const assistantMessage: Message = { role: "assistant", content: finalContent };
             const newMessages = [...state.messages, assistantMessage];
-            const newTitle = generateTitleFromAssistantContent(finalContent, "新对话");
+            const fallbackTitle = getNewConversationTitle();
+            const newTitle = generateTitleFromAssistantContent(finalContent, fallbackTitle);
             return {
               messages: newMessages,
               pendingEdits: edits.length > 0 ? edits : state.pendingEdits,
@@ -640,7 +654,7 @@ export const useAIStore = create<AIState>()(
                 s.id === state.currentSessionId
                   ? {
                       ...s,
-                      title: s.title === "新对话" ? newTitle : s.title,
+                      title: isDefaultConversationTitle(s.title, fallbackTitle) ? newTitle : s.title,
                       messages: newMessages,
                       updatedAt: Date.now(),
                     }

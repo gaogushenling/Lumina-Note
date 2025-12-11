@@ -16,6 +16,7 @@ import { getAgentLoop, resetAgentLoop } from "@/agent/core/AgentLoop";
 import { MODES } from "@/agent/modes";
 import { getAIConfig } from "@/lib/ai";
 import { intentRouter, Intent, queryRewriter, type MessageContent, type TextContent } from "@/services/llm";
+import { getCurrentTranslations } from "@/stores/useLocaleStore";
 
 // 从消息内容中提取文本（处理多模态内容）
 function getTextFromContent(content: MessageContent): string {
@@ -26,6 +27,15 @@ function getTextFromContent(content: MessageContent): string {
     .filter(item => item.type === 'text')
     .map(item => (item as TextContent).text)
     .join('\n');
+}
+
+function getNewConversationTitle(): string {
+  const t = getCurrentTranslations();
+  return t?.common?.newConversation ?? "New conversation";
+}
+
+function isDefaultConversationTitle(title: string, fallback: string): boolean {
+  return title === fallback || title === "新对话";
 }
 
 interface AgentSession {
@@ -42,7 +52,7 @@ interface AgentSession {
   totalTokensUsed?: number;
 }
 
-function generateAgentSessionTitleFromMessages(messages: Message[], fallback: string = "新对话"): string {
+function generateAgentSessionTitleFromMessages(messages: Message[], fallback: string = getNewConversationTitle()): string {
   const firstUser = messages.find((m) => m.role === "user");
   if (!firstUser || !firstUser.content) return fallback;
   const raw = getTextFromContent(firstUser.content).replace(/\s+/g, " ").trim();
@@ -51,7 +61,7 @@ function generateAgentSessionTitleFromMessages(messages: Message[], fallback: st
   return raw.length > maxLen ? `${raw.slice(0, maxLen)}...` : raw;
 }
 
-function generateAgentTitleFromAssistant(messages: Message[], fallback: string = "新对话"): string {
+function generateAgentTitleFromAssistant(messages: Message[], fallback: string = getNewConversationTitle()): string {
   const firstAssistant = messages.find((m) => m.role === "assistant");
   if (!firstAssistant || !firstAssistant.content) return fallback;
   const cleaned = getTextFromContent(firstAssistant.content)
@@ -170,6 +180,7 @@ export const useAgentStore = create<AgentState>()(
 
       const now = Date.now();
       const defaultSessionId = `agent-${now}`;
+      const defaultTitle = getNewConversationTitle();
 
       return {
         // 初始状态（当前视图）
@@ -193,7 +204,7 @@ export const useAgentStore = create<AgentState>()(
         sessions: [
           {
             id: defaultSessionId,
-            title: "新对话",
+            title: defaultTitle,
             createdAt: now,
             updatedAt: now,
             messages: [],
@@ -224,9 +235,10 @@ export const useAgentStore = create<AgentState>()(
 
           const id = `agent-${Date.now()}`;
           const createdAt = Date.now();
+          const fallbackTitle = getNewConversationTitle();
           const session: AgentSession = {
             id,
-            title: title || "新对话",
+            title: title || fallbackTitle,
             createdAt,
             updatedAt: createdAt,
             messages: [],
@@ -342,7 +354,8 @@ export const useAgentStore = create<AgentState>()(
             );
             const baseMessages = currentSession?.messages ?? state.messages ?? [];
             const newMessages = [...baseMessages, userMessage];
-            const newTitle = generateAgentSessionTitleFromMessages(newMessages, "新对话");
+            const fallbackTitle = getNewConversationTitle();
+            const newTitle = generateAgentSessionTitleFromMessages(newMessages, fallbackTitle);
 
             return {
               currentTask: displayContent,
@@ -352,7 +365,7 @@ export const useAgentStore = create<AgentState>()(
                 s.id === state.currentSessionId
                   ? {
                     ...s,
-                    title: s.title === "新对话" ? newTitle : s.title,
+                    title: isDefaultConversationTitle(s.title, fallbackTitle) ? newTitle : s.title,
                     currentTask: displayContent,
                     messages: newMessages,
                     lastError: null,
@@ -676,7 +689,8 @@ export const useAgentStore = create<AgentState>()(
             }
             // 3) loop 消息更短或为空时，不覆盖 UI，避免“闪清空”效果
 
-            const newTitle = generateAgentTitleFromAssistant(finalMessages, "新对话");
+            const fallbackTitle = getNewConversationTitle();
+            const newTitle = generateAgentTitleFromAssistant(finalMessages, fallbackTitle);
 
             // 任务结束时清除超时状态
             const isFinished = ["completed", "error", "idle", "aborted"].includes(loopState.status);
@@ -701,7 +715,7 @@ export const useAgentStore = create<AgentState>()(
                 s.id === state.currentSessionId
                   ? {
                     ...s,
-                    title: s.title === "新对话" ? newTitle : s.title,
+                    title: isDefaultConversationTitle(s.title, fallbackTitle) ? newTitle : s.title,
                     status: loopState.status,
                     messages: finalMessages,
                     currentTask: loopState.currentTask,

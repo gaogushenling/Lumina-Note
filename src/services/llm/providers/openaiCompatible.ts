@@ -152,10 +152,19 @@ export class OpenAICompatibleProvider implements LLMProvider {
     
     let content = "";
     if (message) {
-      // 处理 reasoning content
+      // 处理 reasoning content：优先使用配置字段，同时兜底常见别名
       const reasoningField = this.providerConfig.reasoningField || "reasoning_content";
-      const reasoning = message[reasoningField] as string | undefined;
-      if (reasoning && this.providerConfig.supportsReasoning) {
+      const reasoningKeys = [reasoningField, "reasoning_content", "reasoning"];
+      const reasoning = this.providerConfig.supportsReasoning
+        ? reasoningKeys
+            .map(key => {
+              const val = (message as Record<string, unknown>)[key];
+              return typeof val === "string" && val.length > 0 ? val : undefined;
+            })
+            .find(Boolean)
+        : undefined;
+
+      if (reasoning) {
         content += `<thinking>\n${reasoning}\n</thinking>\n\n`;
       }
       content += (message.content as string) || "";
@@ -225,6 +234,7 @@ export class OpenAICompatibleProvider implements LLMProvider {
 
     // 使用自定义解析器处理 reasoning_content
     const reasoningField = this.providerConfig.reasoningField || "reasoning_content";
+    const reasoningKeys = [reasoningField, "reasoning_content", "reasoning"];
     const supportsReasoning = this.providerConfig.supportsReasoning;
 
     const parseChunk = (chunk: string): StreamChunk[] => {
@@ -234,8 +244,16 @@ export class OpenAICompatibleProvider implements LLMProvider {
         const delta = data.choices?.[0]?.delta;
 
         // reasoning content
-        if (supportsReasoning && delta?.[reasoningField]) {
-          results.push({ type: "reasoning", text: delta[reasoningField] });
+        if (supportsReasoning && delta) {
+          const reasoningText = reasoningKeys
+            .map(key => {
+              const val = (delta as Record<string, unknown>)[key];
+              return typeof val === "string" && val.length > 0 ? val : undefined;
+            })
+            .find(Boolean);
+          if (reasoningText) {
+            results.push({ type: "reasoning", text: reasoningText });
+          }
         }
 
         // 正常文本内容

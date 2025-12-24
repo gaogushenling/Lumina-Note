@@ -11,6 +11,8 @@ export class OllamaProvider extends OpenAICompatibleProvider {
   constructor(config: LLMConfig) {
     super(config, {
       defaultBaseUrl: "http://localhost:11434/v1",
+      supportsReasoning: true,
+      reasoningField: "reasoning",
       // Ollama 本地模型通常不需要严格的 token 限制
       customBodyFields: {
         options: {

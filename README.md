@@ -310,6 +310,7 @@ graph TD
    - 点击左下角 **设置图标** → **AI 设置**
    - 选择模型提供商，填入你的 API Key
    - 点击保存
+   - 本地推理：如需使用 Ollama 的 `deepseek-r1:14b` 并保留推理片段，可参考 `docs/LOCAL_OLLAMA_DEEPSEEK_R1.md`
 
 2. **使用入口（3 个）——都支持 Chat / Agent 模式**：
 
